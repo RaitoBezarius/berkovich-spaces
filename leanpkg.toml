@@ -1,0 +1,8 @@
+[package]
+name = "berkovich-spaces"
+version = "0.1"
+lean_version = "leanprover-community/lean:3.24.0"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "74760f22709c3a4d57d7d0eced60473cbc9250ef"}

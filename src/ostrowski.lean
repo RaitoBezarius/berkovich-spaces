@@ -28,15 +28,14 @@ def metric_space_of_real_abv (abv: α → ℝ) [is_absolute_value abv] : metric_
     apply abv_add,
   end}
 
--- théorème d'Ostrowski
 -- prouver que la valeur absolue triviale est une valeur absolue
-def trivial_abs : ℚ → ℝ := λ a,
+def trivial_abs : ℚ → ℚ := λ a,
     if a = 0 then 0
     else 1
 
 instance : is_absolute_value trivial_abs :=
 { abv_nonneg := λ x, begin rw [trivial_abs], dsimp, split_ifs, exact le_refl 0, exact zero_le_one, end,
-  abv_eq_zero := λ x, begin rw [trivial_abs], dsimp, split, contrapose!, intro, rw if_neg a, norm_num, intro, rw if_pos a, end,
+  abv_eq_zero := λ x, begin rw [trivial_abs], dsimp, split, contrapose!, intro, rw if_neg ᾰ, norm_num, intro, rw if_pos ᾰ, end,
   abv_add := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals { linarith,}, exfalso, rw [h_1,h_2] at h, simpa using h, end,
   abv_mul := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals {norm_num}, finish, finish, finish, finish, end }
 
@@ -108,8 +107,10 @@ begin
 end
 
 
--- définition de l'équivalence de valeur absolues
+-- rational metric space equipped of an absolute value
+def metric_rat_with_abv (abv: ℚ → ℝ) [is_absolute_value abv]: metric_space ℚ := metric_space_of_real_abv abv
 
+-- définition de l'équivalence de valeur absolues
 def metric_space_eq {α: Type*} (d d' : metric_space α) : Prop :=
     d.to_uniform_space.to_topological_space = d'.to_uniform_space.to_topological_space
 
@@ -139,66 +140,58 @@ lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ �
     : ((∃ q : ℚ, (abv q) ≠ (trivial_abs q)) →  (∃ n : ℚ, (n ≠ 0) ∧ (abv(n) < 1 ∨ abv(n) > 1))) :=
     (begin
     contrapose!,
-    intros,
+    intros H q,
     by_cases (q = 0),
     rw h,
     rw [is_absolute_value.abv_zero abv, is_absolute_value.abv_zero trivial_abs],
-    have b := a q,
-    cases b with hq0 h_inequality,
-    exfalso,
-    exact h hq0,
     have c : trivial_abs q = 1,
     apply (trivial_abs_is_one_iff_nonzero_arg q).1,
     exact h,
     rw c,
-    cases h_inequality with h_left_ineq h_right_ineq,
-    apply le_antisymm,
-    exact h_right_ineq,
-    exact h_left_ineq,
+    linarith [H q h]
     end)
+
+def is_padic_norm 
+  (p: ℕ) [fact p.prime]
+  (abv: ℚ → ℚ) [is_absolute_value abv] :=
+    (@padic_norm_e p _) ∘ (@padic.of_rat p _) = abv
 
 lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℚ) [habv : is_absolute_value abv]
       (hnontriv: abv ≠ trivial_abs)
-      (all_rat_le_one: (∀ z : ℚ, abv z ≤ 1)):
+      (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
       ∃ (p) [hp: nat.prime p],
-        metric_space_eq
-            (metric_rat_with_abv abv)
-            (padic.metric_space p) := sorry
+      @is_padic_norm p hp abv _ := sorry
+
+-- all_nat_le_one become all_int_le_one
     
 lemma rat_abs_val_unbounded_real (abv: ℚ → ℚ)
     [habv : is_absolute_value abv]
     (exists_rat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
-    metric_space_eq
-        (metric_rat_with_abv abv)
-        (rat.metric_space) :=
+    abv = (@abs ℚ _) :=
     begin
         push_neg at exists_rat_unbounded,
         have n0_spec := nat.find_spec exists_rat_unbounded,
         set n0 := nat.find exists_rat_unbounded,
-
+        sorry
     end
 
 /- Théorème d'Ostrowski -/
 theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℚ)
     [habv: is_absolute_value abv]
     (hnontriv: abv ≠ trivial_abs):
-    (metric_space_eq
-        (metric_space_of_real_abv abv)
-        (rat.metric_space))
+    (abv = (@abs ℚ _))
     ∨
     (∃ (p) [hp: nat.prime p],
-        (metric_space_eq
-            (metric_rat_with_abv abv)
-            (padic.metric_space p))) :=
+        @is_padic_norm p hp abv _) :=
     begin
-        by_cases boundess : ∀ z ∈ ℚ, abv z ≤ 1,
+        by_cases boundness : ∀ z : ℕ, abv z ≤ 1,
         {
             apply or.inr,
-            apply' rat_abs_val_one_bounded_padic,
+            exact rat_abs_val_one_bounded_padic _ hnontriv boundness,
         },
         {
             apply or.inl,
-            exact rat_abs_val_unbdd_real _ _ _ _,
+            exact rat_abs_val_unbounded_real abv boundness,
         }
     end
 end

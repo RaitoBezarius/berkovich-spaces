@@ -2,6 +2,7 @@ import data.padics
 import topology.basic
 import data.rat.basic
 import data.real.cau_seq
+import analysis.special_functions.exp_log
 import topology.metric_space.basic
 import topology.homeomorph
 import data.nat.prime
@@ -69,7 +70,7 @@ exact ne_of_gt x_pos,
 end
 
 -- integers values of absolute value determines entirely the absolute value.
-theorem rat_abs_val_eq_of_eq_on_pnat (abv abv2 : ℚ → ℝ) [habv : is_absolute_value abv] [habv2 : is_absolute_value abv2] (h : ∀ n : ℕ+, abv n = abv2 n)
+theorem rat_abs_val_eq_of_eq_on_pnat (abv abv2 : ℚ → ℝ) [habv : is_absolute_value abv] [habv2 : is_absolute_value abv2] (h : ∀ n : ℕ, abv n = abv2 n)
  : abv = abv2 :=
 begin
   ext,
@@ -100,7 +101,7 @@ begin
   simp,
   rw is_absolute_value.abv_zero abv,
   rw is_absolute_value.abv_zero abv2,
-  have := h ⟨nat.succ x_1, nat.succ_pos _⟩,
+  have := h (nat.succ x_1),
   simp [-add_comm] at this,
   simp [-add_comm],
   rw this,
@@ -163,23 +164,59 @@ lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℚ) [habv : is_absolute_valu
       @is_padic_norm p hp abv _ := sorry
 
 -- all_nat_le_one become all_int_le_one
-    
-lemma rat_abs_val_unbounded_real (abv: ℚ → ℚ)
+
+lemma nat_abs_val_le_nat_pow_alpha (abv: ℚ → ℝ)
+  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ):
+  (abv n: ℝ) ≤ real.exp (real.log n * (real.log (abv n₀) / real.log n₀)) := sorry
+
+lemma nat_pow_alpha_le_nat_abs_val (abv: ℚ → ℝ)
+  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ):
+  real.exp (real.log n * (real.log (abv n₀) / real.log n₀)) ≤ (abv n: ℝ) := sorry
+
+def equiv_abs (α: ℝ) (q: ℚ): ℝ := real.exp (α * real.log (@abs ℚ _ q))
+lemma equiv_abs_is_absolute_value (α: ℝ): is_absolute_value (equiv_abs α) := sorry
+
+lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     [habv : is_absolute_value abv]
     (exists_rat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
-    abv = (@abs ℚ _) :=
+    ∃ α: ℝ, abv = equiv_abs α :=
     begin
         push_neg at exists_rat_unbounded,
-        have n0_spec := nat.find_spec exists_rat_unbounded,
-        set n0 := nat.find exists_rat_unbounded,
-        sorry
+        -- we want the smallest.
+        set n₀ := nat.find exists_rat_unbounded,
+        have n₀_spec := nat.find_spec exists_rat_unbounded,
+        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1.
+        set α := real.log (abv n₀) / real.log n₀ with h_α,
+        use α,
+        apply rat_abs_val_eq_of_eq_on_pnat _ _,
+        {
+          intro n,
+          unfold equiv_abs,
+          -- prove abv n = n^α
+          have: abv n = real.exp (real.log n * α) :=
+          begin
+            apply le_antisymm,
+            apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
+            apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
+          end,
+          rw this,
+          congr' 1,
+          rw abs_eq_self.2,
+          push_cast,
+          ac_refl,
+          norm_cast,
+          exact zero_le n,
+          -- and n^α = |n|^α
+        },
+        exact habv,
+        exact equiv_abs_is_absolute_value _,
     end
 
 /- Théorème d'Ostrowski -/
 theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℚ)
     [habv: is_absolute_value abv]
     (hnontriv: abv ≠ trivial_abs):
-    (abv = (@abs ℚ _))
+    (∃ α : ℝ, real.of_rat ∘ abv = equiv_abs α)
     ∨
     (∃ (p) [hp: nat.prime p],
         @is_padic_norm p hp abv _) :=
@@ -191,7 +228,8 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℚ)
         },
         {
             apply or.inl,
-            exact rat_abs_val_unbounded_real abv boundness,
+            sorry, -- projections are a bit annoying.
+            -- exact rat_abs_val_unbounded_real abv boundness,
         }
     end
 end

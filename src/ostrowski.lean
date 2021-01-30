@@ -12,6 +12,8 @@ import tactic.apply
 import tactic.linarith
 import topology.metric_space.basic
 
+import abvs_equiv
+
 section
 open_locale classical
 open list option is_absolute_value
@@ -31,7 +33,7 @@ def metric_space_of_real_abv (abv: α → ℝ) [is_absolute_value abv] : metric_
   end}
 
 -- prouver que la valeur absolue triviale est une valeur absolue
-def trivial_abs : ℚ → ℚ := λ a,
+def trivial_abs : ℚ → ℝ := λ a,
     if a = 0 then 0
     else 1
 
@@ -172,7 +174,7 @@ def metric_space_eq {α: Type*} (d d' : metric_space α) : Prop :=
 -- ce qui est immédiat par antisymétrie.
 
 -- TODO: what about n : N ?
-lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ → ℚ) [is_absolute_value abv]
+lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ → ℝ) [is_absolute_value abv]
     : ((∃ q : ℚ, (abv q) ≠ (trivial_abs q)) →  (∃ n : ℚ, (n ≠ 0) ∧ (abv(n) < 1 ∨ abv(n) > 1))) :=
     (begin
     contrapose!,
@@ -189,10 +191,10 @@ lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ �
 
 def is_padic_norm 
   (p: ℕ) [fact p.prime]
-  (abv: ℚ → ℚ) [is_absolute_value abv] :=
-    (@padic_norm_e p _) ∘ (@padic.of_rat p _) = abv
+  (abv: ℚ → ℝ) [is_absolute_value abv] :=
+    (λ r: ℚ, (padic_norm p r: ℝ)) = abv
 
-lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℚ) [habv : is_absolute_value abv]
+lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
       (hnontriv: abv ≠ trivial_abs)
       (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
       ∃ (p) [hp: nat.prime p],
@@ -250,31 +252,32 @@ def hom_of_equiv_abs (α: ℝ) (α_ne_zero: α ≠ 0):
 lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     [habv : is_absolute_value abv]
     (exists_rat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
-    ∃ α: ℝ, abv = equiv_abs α :=
+    --∃ α: ℝ, abv = equiv_abs α :=
+    abvs_equiv abv (λ x: ℚ, abs x) :=
     begin
         push_neg at exists_rat_unbounded,
         -- we want the smallest.
         set n₀ := nat.find exists_rat_unbounded,
         have n₀_spec := nat.find_spec exists_rat_unbounded,
         have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1.
+        apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
         use α,
-        have α_ne_zero: α ≠ 0,
+        have zero_lt_α: 0 < α,
         {
-          apply div_ne_zero,
+          apply div_pos,
           have one_lt_abvn₀: 1 < abv n₀,
           {
             rw ← gt_iff_lt,
             exact n₀_spec,
           },
-          exact (ne_of_gt ∘ (real.log_pos_iff (by linarith only [one_lt_abvn₀])).2)
+          exact (real.log_pos_iff (by linarith only [one_lt_abvn₀])).2
             one_lt_abvn₀,
-          exact (ne.symm ∘ ne_of_lt ∘
-            (real.log_pos_iff (by { norm_cast, linarith only [n₀_not_one], })).2)
+          exact (real.log_pos_iff (by { norm_cast, linarith only [n₀_not_one], })).2
               (by { norm_cast, linarith only [n₀_not_one], }),
         },
         set abv_hom := hom_of_abv abv with abv_hom_def,
-        set equiv_abs_hom := hom_of_equiv_abs α α_ne_zero with equiv_abs_def,
+        set equiv_abs_hom := hom_of_equiv_abs α (ne.symm $ ne_of_lt zero_lt_α) with equiv_abs_def,
         have abv_eq_hom_fn: abv = abv_hom := rfl,
         have equiv_abs_eq_hom_fn: equiv_abs α = equiv_abs_hom := rfl,
         have same_on_neg_one: abv_hom (-1) = equiv_abs_hom (-1),
@@ -283,7 +286,10 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           rw [abv_neg abv, equiv_abs_neg],
           rw [abv_one abv, equiv_abs_one],
         },
+        use zero_lt_α,
+        unfold equiv_abs at equiv_abs_eq_hom_fn,
         rw [abv_eq_hom_fn, equiv_abs_eq_hom_fn],
+        symmetry,
         apply mul_mor_eq_of_eq_on_pnat _ _ same_on_neg_one,
         intro n,
         rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
@@ -305,10 +311,10 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     end
 
 /- Théorème d'Ostrowski -/
-theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℚ)
+theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
     [habv: is_absolute_value abv]
     (hnontriv: abv ≠ trivial_abs):
-    (∃ α : ℝ, real.of_rat ∘ abv = equiv_abs α)
+    (abvs_equiv abv (λ x: ℚ, abs x))
     ∨
     (∃ (p) [hp: nat.prime p],
         @is_padic_norm p hp abv _) :=

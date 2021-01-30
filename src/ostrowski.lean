@@ -3,6 +3,7 @@ import topology.basic
 import data.rat.basic
 import data.real.cau_seq
 import analysis.special_functions.exp_log
+import analysis.special_functions.pow
 import topology.metric_space.basic
 import topology.homeomorph
 import data.nat.prime
@@ -13,7 +14,7 @@ import topology.metric_space.basic
 
 section
 open_locale classical
-open list nnreal option is_absolute_value
+open list option is_absolute_value
 noncomputable theory
 
 variables {α : Type*} [ring α]
@@ -69,44 +70,78 @@ rw rat.mk_pnat,
 exact ne_of_gt x_pos,
 end
 
--- integers values of absolute value determines entirely the absolute value.
-theorem rat_abs_val_eq_of_eq_on_pnat (abv abv2 : ℚ → ℝ) [habv : is_absolute_value abv] [habv2 : is_absolute_value abv2] (h : ∀ n : ℕ, abv n = abv2 n)
- : abv = abv2 :=
+def hom_of_abv {α} [linear_ordered_field α] {β} [ring β]
+  (abv: β → α) [is_absolute_value abv]:
+  monoid_with_zero_hom β α := {
+    to_fun := abv,
+    map_zero' := sorry,
+    map_one' := sorry,
+    map_mul' := sorry,
+ }
+
+-- Deserves its place in matlib, as `monoid_with_zero_hom.map_inv`
+theorem Γ₀_map_inv {G₁ G₂: Type} [group_with_zero G₁] [group_with_zero G₂]
+  (φ: monoid_with_zero_hom G₁ G₂) (a: G₁) (a_ne_zero: a ≠ 0): φ a⁻¹ = (φ a)⁻¹ :=
+begin
+  apply eq_inv_of_mul_left_eq_one,
+  rw ← monoid_with_zero_hom.map_mul,
+  rw inv_mul_cancel a_ne_zero,
+  rw monoid_with_zero_hom.map_one,
+end
+
+-- Integer values of a morphism `φ` and its value on `-1` completely determines `φ`
+theorem mul_mor_eq_of_eq_on_pnat (φ₁ φ₂: monoid_with_zero_hom ℚ ℝ)
+  (same_on_neg_one: φ₁ (-1) = φ₂ (-1)) (same_on_nat: ∀ n: ℕ, φ₁ n = φ₂ n): (φ₁: ℚ → ℝ) = φ₂ :=
 begin
   ext,
-  suffices : ∀ z : ℤ, abv z = abv2 z,
+  suffices : ∀ z : ℤ, φ₁ z = φ₂ z,
   begin
     induction x,
     rw rat_mk_eq_div,
-    rw is_absolute_value.abv_div abv,
-    rw is_absolute_value.abv_div abv2,
+    repeat { rw div_eq_mul_inv, },
+    have x_denom_ne_zero: (x_denom: ℚ) ≠ 0,
+    {
+      symmetry,
+      norm_cast,
+      exact (ne_of_lt x_pos),
+    },
+    rw monoid_with_zero_hom.map_mul φ₁,
+    rw Γ₀_map_inv φ₁ x_denom x_denom_ne_zero,
+    rw monoid_with_zero_hom.map_mul φ₂,
+    rw Γ₀_map_inv φ₂ x_denom x_denom_ne_zero,
     rw this x_num,
     have := this (↑ x_denom),
     norm_cast at this,
     rw this,
   end,
   intro x,
-  suffices : ∀ z : ℕ, abv z = abv2 z,
+  suffices : ∀ z : ℕ, φ₁ z = φ₂ z,
   begin
     induction x,
     simp [this],
     push_cast,
-    rw is_absolute_value.abv_neg abv,
-    rw is_absolute_value.abv_neg abv2,
+    conv {
+      congr,
+      rw neg_eq_neg_one_mul,
+      skip,
+      rw neg_eq_neg_one_mul,
+      skip,
+    },
+    rw monoid_with_zero_hom.map_mul φ₁,
+    rw monoid_with_zero_hom.map_mul φ₂,
+    rw same_on_neg_one,
+    simp,
     norm_cast,
     exact this _,
   end,
   intro x,
   cases x,
   simp,
-  rw is_absolute_value.abv_zero abv,
-  rw is_absolute_value.abv_zero abv2,
-  have := h (nat.succ x_1),
+  have := same_on_nat (nat.succ x_1),
   simp [-add_comm] at this,
   simp [-add_comm],
   rw this,
 end
-
 
 -- rational metric space equipped of an absolute value
 def metric_rat_with_abv (abv: ℚ → ℝ) [is_absolute_value abv]: metric_space ℚ := metric_space_of_real_abv abv
@@ -173,8 +208,44 @@ lemma nat_pow_alpha_le_nat_abs_val (abv: ℚ → ℝ)
   [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ):
   real.exp (real.log n * (real.log (abv n₀) / real.log n₀)) ≤ (abv n: ℝ) := sorry
 
-def equiv_abs (α: ℝ) (q: ℚ): ℝ := real.exp (α * real.log (@abs ℚ _ q))
-lemma equiv_abs_is_absolute_value (α: ℝ): is_absolute_value (equiv_abs α) := sorry
+def equiv_abs (α: ℝ) := λ q: ℚ, ((abs q: ℝ) ^ α)
+
+def equiv_abs_neg (α: ℝ): ∀ q: ℚ, equiv_abs α (-q) = equiv_abs α q :=
+begin
+  intro q,
+  unfold equiv_abs,
+  push_cast,
+  rw neg_eq_neg_one_mul,
+  simp,
+end
+
+def equiv_abs_one {α: ℝ}: equiv_abs α 1 = 1 :=
+begin
+  unfold equiv_abs,
+  simp,
+end
+
+def hom_of_equiv_abs (α: ℝ) (α_ne_zero: α ≠ 0):
+  monoid_with_zero_hom ℚ ℝ := {
+    to_fun := equiv_abs α,
+    map_zero' := by {
+      unfold equiv_abs,
+      norm_cast,
+      exact real.zero_rpow α_ne_zero,
+    },
+    map_one' := by {
+      unfold equiv_abs,
+      norm_cast,
+      exact real.one_rpow α,
+    },
+    map_mul' := by {
+      unfold equiv_abs,
+      intros x y,
+      push_cast,
+      rw abs_mul,
+      rw real.mul_rpow (abs_nonneg x) (abs_nonneg y),
+    },
+  }
 
 lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     [habv : is_absolute_value abv]
@@ -188,28 +259,49 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1.
         set α := real.log (abv n₀) / real.log n₀ with h_α,
         use α,
-        apply rat_abs_val_eq_of_eq_on_pnat _ _,
+        have α_ne_zero: α ≠ 0,
         {
-          intro n,
-          unfold equiv_abs,
-          -- prove abv n = n^α
-          have: abv n = real.exp (real.log n * α) :=
-          begin
-            apply le_antisymm,
-            apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
-            apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
-          end,
-          rw this,
-          congr' 1,
-          rw abs_eq_self.2,
-          push_cast,
-          ac_refl,
-          norm_cast,
-          exact zero_le n,
-          -- and n^α = |n|^α
+          apply div_ne_zero,
+          have one_lt_abvn₀: 1 < abv n₀,
+          {
+            rw ← gt_iff_lt,
+            exact n₀_spec,
+          },
+          exact (ne_of_gt ∘ (real.log_pos_iff (by linarith only [one_lt_abvn₀])).2)
+            one_lt_abvn₀,
+          exact (ne.symm ∘ ne_of_lt ∘
+            (real.log_pos_iff (by { norm_cast, linarith only [n₀_not_one], })).2)
+              (by { norm_cast, linarith only [n₀_not_one], }),
         },
-        exact habv,
-        exact equiv_abs_is_absolute_value _,
+        set abv_hom := hom_of_abv abv with abv_hom_def,
+        set equiv_abs_hom := hom_of_equiv_abs α α_ne_zero with equiv_abs_def,
+        have abv_eq_hom_fn: abv = abv_hom := rfl,
+        have equiv_abs_eq_hom_fn: equiv_abs α = equiv_abs_hom := rfl,
+        have same_on_neg_one: abv_hom (-1) = equiv_abs_hom (-1),
+        {
+          rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
+          rw [abv_neg abv, equiv_abs_neg],
+          rw [abv_one abv, equiv_abs_one],
+        },
+        rw [abv_eq_hom_fn, equiv_abs_eq_hom_fn],
+        apply mul_mor_eq_of_eq_on_pnat _ _ same_on_neg_one,
+        intro n,
+        rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
+        unfold equiv_abs,
+        -- prove abv n = n^α
+        have: abv n = n ^ α :=
+        begin
+          -- apply le_antisymm,
+          -- apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
+          -- apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
+          sorry
+        end,
+        rw this,
+        congr' 1,
+        rw abs_eq_self.2,
+        push_cast,
+        norm_cast,
+        exact zero_le n,
     end
 
 /- Théorème d'Ostrowski -/

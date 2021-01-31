@@ -291,16 +291,16 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         -- prove abv n = n^α
         have: abv n = n ^ α :=
         begin
-          -- apply le_antisymm,
+          apply le_antisymm,
           -- apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
           -- apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
-          sorry
+          sorry,
+          sorry,
         end,
         rw this,
         congr' 1,
         rw abs_eq_self.2,
-        push_cast,
-        norm_cast,
+        all_goals { norm_cast },
         exact zero_le n,
     end
 
@@ -320,8 +320,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
         },
         {
             apply or.inl,
-            sorry, -- projections are a bit annoying.
-            -- exact rat_abs_val_unbounded_real abv boundness,
+            exact rat_abs_val_unbounded_real abv boundness,
         }
     end
 end

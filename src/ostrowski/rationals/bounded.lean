@@ -13,171 +13,55 @@ lemma prime_norm_lt_one_of_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute
       (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
       ∃ p: ℕ, prime p ∧ abv p < 1 :=
 begin
-  -- First we find some `n ∈ ℕ*` such that `abv n < 1`.
-  obtain ⟨ n, zero_lt_n, abvn_lt_one ⟩: ∃ n: ℕ, 0 < n ∧ abv n < 1,
-  {
-    -- `abv` is nontrivial so there is some `r ≠ 0` such that `abv r ≠ 1`.
-    obtain ⟨ r, r_ne_zero, abvr_notone ⟩: ∃ r: ℚ, r ≠ 0 ∧ abv r ≠ 1,
-    {
-      -- Just some formal play, not much to say.
-      by_contra h,
-      push_neg at h,
-      apply hnontriv,
-      ext r,
-      by_cases h': r = 0,
-      {
-        rw (abv_eq_zero abv).2 h',
-        rw (abv_eq_zero trivial_abs).2 h',
-      },
-      {
-        rw h r h',
-        rw [trivial_abs],
-        dsimp,
-        split_ifs,
-        refl,
-      },
-    },
-    -- Let's write `r = a/b`. We get `(abv a)/(abv b) ≠ 1`, then `abv a ≠ abv b`.
-    rcases r with ⟨ a, b, b_pos, a_b_coprimes ⟩,
-    have not_eq: abv a ≠ abv b,
-    {
-      -- Just doing the calculus by hand.
-      -- Is there a simpler way to do this ?
-      rw rat_mk_eq_div at abvr_notone,
-      rw is_absolute_value.abv_div abv at abvr_notone,
-      intro h,
-      rw h at abvr_notone,
-      apply abvr_notone,
-      ring,
-      rw inv_mul_cancel,
-      intro h,
-      rw (abv_eq_zero abv) at h,
-      norm_cast at h,
-      linarith,
-    },
-    -- Then either `abv a` or `abv b` is strictly less than one,
-    -- so we have some `n: ℕ` such that `abv n < 1`.
-    obtain ⟨ zero_ne_a, zero_ne_b ⟩: 0 ≠ a ∧ 0 ≠ b,
-    {
-      by_contra h,
-      rw ← or_iff_not_and_not at h,
-      cases h,
-      {
-        -- `a = 0` but `r = a/b ≠ 0`.
-        apply r_ne_zero,
-        rw rat_mk_eq_div,
-        rw ← h,
-        norm_cast,
-        exact rat.zero_mk b,
-      },
-      {
-        -- `b = 0` but `b` is the denominator of `r`; `b_pos` says `0 < b`.
-        linarith,
-      },
-    },
-
-    by_cases abv b = 1,
-    {
-      -- If `abv b = 1`, we need to discuss wether `a ≥ 0` or not.
-      rw h at not_eq,
-      cases a,
-      {
-        -- `a ≥ 0`
-        use a,
-        rw ← int.coe_nat_eq a at not_eq,
-        norm_cast at not_eq,
-        have p: abv a ≤ 1,
-        from all_nat_le_one a,
-        rw lt_iff_le_and_ne,
-        rw ← int.coe_nat_eq at zero_ne_a,
-        norm_cast,
-        norm_cast at zero_ne_a,
-        exact ⟨ ⟨ zero_le a, zero_ne_a ⟩, lt_of_le_of_ne p not_eq ⟩,
-      },
-      {
-        -- `a < 0`
-        use a + 1,
-        push_cast at not_eq,
-        rw (abv_neg abv) at not_eq,
-        have p: abv (a + 1) ≤ 1,
-        from all_nat_le_one (a + 1),
-        -- rw lt_iff_le_and_ne,
-        push_cast,
-        exact ⟨ nat.zero_lt_succ a, lt_of_le_of_ne p not_eq ⟩,
-      },
-    },
-    {
-      -- `abv b ≠ 1`, so we show `abv b < 1`, as `b: ℕ`, we get what we wanted.
-      use b,
-      have p: abv b ≤ 1,
-      from all_nat_le_one b,
-      exact ⟨ b_pos, lt_of_le_of_ne p h ⟩,
-    },
-  },
-
-  /-
-  We just got : `⟨ n, n_ne_zero, abvn_lt_one ⟩: ∃ n: ℕ, n ≠ 0 ∧ abv n < 1`
-  Now we search for some prime `p` such that `abv p < 1`.
-  We prove the existence by contradiction : let us suppose that `forall p, abv p < 1`.
-  -/
-  by_contradiction h,
+  by_contra,
   push_neg at h,
 
-  -- First we prove that the absolute value commutes with arbitrary products
-  have abv_prod_eq_prod_abv: ∀ l: list nat, abv (prod l: ℕ) = prod (list.map (λ k: ℕ, abv k) l),
+  suffices h': ∀ n: ℕ, n ≠ 0 → abv n = 1,
   {
-    intro l,
-    induction l with r l h,
+    apply hnontriv,
+    set abv_hom := hom_of_abv abv with abv_hom_def,
+    set triv_hom := hom_of_abv trivial_abs with triv_hom_def,
+    have abv_hom_f: abv = abv_hom := by refl,
+    have triv_hom_f: trivial_abs = triv_hom := by refl,
+    rw [abv_hom_f, triv_hom_f],
+    apply mul_mor_eq_of_eq_on_pnat,
     {
-      -- The result is clear for the empty list.
-      simp,
-      exact abv_one abv,
+      rw [← abv_hom_f, ← triv_hom_f],
+      rw [abv_neg abv, abv_neg trivial_abs],
+      rw [abv_one abv, abv_one trivial_abs],
     },
     {
-      -- We use the compatibility of absolute values with the product.
-      simp,
-      rw ← h,
-      rw abv_mul abv,
+      intro n,
+      rw [← abv_hom_f, ← triv_hom_f],
+      unfold trivial_abs,
+      by_cases h'': n = 0,
+      {
+        rw h'',
+        simp,
+        rw abv_zero abv,
+      },
+      {
+        rw h' n h'',
+        simp [h''],
+      }
     },
-    -- This went surprisingly well !
   },
-
-  -- then that in our case any prouct of primes is equal to `1`.
-  -- (We use `= 1` because it avoids performing calculations by hand.)
-  have prod_abv_primes_ge_one:
-    ∀ l: list nat, (∀ k ∈ l, prime k) → prod (list.map (λ k: ℕ, abv k) l) = 1,
+  
+  apply @induction_on_primes (λ n, n ≠ 0 → abv n = 1),
+  { tauto },
+  { intro h, exact abv_one abv, },
   {
-    intro l,
-    induction l with r l h',
+    intros p a p_prime ha hprod,
+    push_cast,
+    rw abv_mul abv,
+    have abvp_eq_one: abv p = 1,
+    { by linarith [h p p_prime, all_nat_le_one p], },
+    rw abvp_eq_one,
+    have a_ne_zero: a ≠ 0,
+    { by_contra h, push_neg at h, apply hprod, simp [h], },
+    rw ha a_ne_zero,
     simp,
-    {
-      intro h_primes,
-      simp,
-      have p₁: abv r = 1 := le_antisymm
-        (all_nat_le_one r)                      -- By hypothesis `|…| ≤ 1`.
-        (h r (h_primes r (by { left, refl, }))) -- Everyone in `l` is prime therefore `|…| ≥ 1`;
-      ,
-      -- The product of the rest is equal to `1`.
-      have p₂ := h' (λ r h, by { apply h_primes r, right, exact h, }),
-      rw p₁,
-      rw p₂,
-      simp,
-    },
   },
-
-  /- the absolute value of the product of the prime factors of `n` is therefore
-    greater than or equal to `1`. -/
-  have prod_eq_one: abv (prod (nat.factors n): ℕ) = 1,
-  {
-    rw abv_prod_eq_prod_abv,
-    apply prod_abv_primes_ge_one,
-    intros p hp,
-    rw ← nat.prime_iff_prime,
-    exact @nat.mem_factors n p hp,
-  },
-
-  rw nat.prod_factors zero_lt_n at prod_eq_one,
-  linarith only [abvn_lt_one, prod_eq_one],
 end
 
 lemma padic_norm_q (p: ℕ) (q: ℕ) (p_prime: prime p) (q_prime: prime q):

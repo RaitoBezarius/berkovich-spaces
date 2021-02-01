@@ -123,25 +123,22 @@ lemma abs_val_bounded_q (abv : ℚ → ℝ) [habv : is_absolute_value abv]
 begin
   -- We set `α` such that it Just Works™
   set α := - real.log (abv p) / real.log p with α_def,
-  have zero_lt_α: 0 < α,
+  
+  have α_pos: 0 < α,
   {
-    apply div_pos,
-    have one_lt_abvp: abv p < 1,
+    obtain ⟨ p_pos_ℝ, p_nonzero_ℚ ⟩: 0 < (p: ℝ) ∧ (p: ℚ) ≠ 0,
     {
-      rw ← gt_iff_lt,
-      exact abvp_lt_one,
+      norm_cast,
+      exact ((λ p_pos, and.intro p_pos (ne.symm $ ne_of_lt p_pos)) $
+        nat.prime.pos $ nat.prime_iff_prime.2 p_prime),
     },
-    apply neg_pos_of_neg,
-    have p_ne_zero_ℚ: (p: ℚ) ≠ 0,
-    { norm_cast, linarith only [nat.prime.pos $ nat.prime_iff_prime.2 p_prime], },
-    exact (real.log_neg_iff ((abv_pos abv).2 p_ne_zero_ℚ)).2
-      one_lt_abvp,
-    have p_pos_ℝ: 0 < (p: ℝ),
-    { norm_cast, exact (nat.prime.pos $ nat.prime_iff_prime.2 p_prime), },
-    exact (real.log_pos_iff p_pos_ℝ).2
-        (by { norm_cast, exact (nat.prime.one_lt $ nat.prime_iff_prime.2 p_prime), }),
+
+    refine div_pos (neg_pos_of_neg $
+        (real.log_neg_iff ((abv_pos abv).2 p_nonzero_ℚ)).2 $ gt_iff_lt.2 abvp_lt_one) _,
+    rw_mod_cast real.log_pos_iff p_pos_ℝ,
+    exact (nat.prime.one_lt $ nat.prime_iff_prime.2 p_prime),
   },
-  use [α, zero_lt_α],
+  use [α, α_pos],
 
   intros q q_prime,
 
@@ -149,32 +146,22 @@ begin
   intro h,
   {
     -- When `p = q`, we just need to show that `abv p = p ^ (- α)`.
-    have zero_lt_p: 0 < (p: ℝ),
+    have p_pos: 0 < (p: ℝ),
     { norm_cast, exact nat.lt_of_le_and_ne (zero_le p) (ne.symm (p_prime.1)), },
     -- The result is clear by definition of `α`.
     -- The calculus that leads to it is yet long to formalize...
     rw ← h,
     suffices h: real.log (abv p) = real.log ((1/p) ^ α),
     {
-      have p₁: abv p > 0,
+      refine (λ p₁ p₂, le_antisymm
+        ((real.log_le_log p₁ p₂).1 $ le_of_eq h)
+        ((real.log_le_log p₂ p₁).1 $ le_of_eq $ eq.symm h)) _ _,
       {
-        apply gt_iff_lt.2,
-        apply (abv_pos abv).2,
+        apply gt_iff_lt.2 ∘ (abv_pos abv).2,
         norm_cast,
         exact p_prime.1,
       },
-      have p₂: (1/p: ℝ)^α > 0,
-      {
-        apply real.rpow_pos_of_pos,
-        rw one_div_pos,
-        -- norm_cast,
-        exact zero_lt_p,
-      },
-      apply le_antisymm,
-      rw ← real.log_le_log p₁ p₂,
-      exact le_of_eq h,
-      rw ← real.log_le_log p₂ p₁,
-      exact le_of_eq (eq.symm h),
+      from (real.rpow_pos_of_pos $ one_div_pos.2 p_pos) α,
     },
     have one_lt_p: 1 < p,
     from (nat.prime.one_lt ∘ nat.prime_iff_prime.2) p_prime,
@@ -186,15 +173,15 @@ begin
       ... = real.log (abv p) / real.log p * real.log p
         : by ring
       ... = real.log (p^(real.log (abv p) / real.log p))
-        : by { rw ← real.log_rpow, exact zero_lt_p, }
+        : by { rw ← real.log_rpow, exact p_pos, }
       ... = real.log (p^(- (- real.log (abv p) / real.log p)))
         : by ring
       ... = real.log (p^(-α))     : by rw α_def
       ... = real.log (p^(-1 * α)) : by ring
       ... = real.log ((p ^ (-1: ℝ)) ^ α)
-        : by { congr' 1, exact real.rpow_mul (le_of_lt zero_lt_p) (-1) α, }
+        : by { congr' 1, exact real.rpow_mul (le_of_lt p_pos) (-1) α, }
       ... = real.log (((p ^ (1: ℝ))⁻¹) ^ α)
-        : by { congr' 2, exact real.rpow_neg (le_of_lt zero_lt_p) 1, }
+        : by { congr' 2, exact real.rpow_neg (le_of_lt p_pos) 1, }
       ... = real.log ((p⁻¹) ^ α)
         : by { congr' 3, exact real.rpow_one p, }
       ... = real.log ((1/p) ^ α)  : by simp,
@@ -217,8 +204,6 @@ begin
         -- Went actually pretty nicely !
         intros r h₁ h₂,
         have p := metric.tendsto_at_top.1 (tendsto_pow_at_top_nhds_0_of_lt_1 h₁ h₂),
-        unfold dist at p,
-        unfold abs at p,
         specialize p (1/2) (by linarith),
         rcases p with ⟨ N, hN ⟩,
         use N,
@@ -243,36 +228,25 @@ begin
     {
       have p₁: ((p^n).gcd (q^n): ℤ) = (1: ℤ),
       {
-        norm_cast,
         suffices coprimes: p.coprime q,
-        { exact (nat.coprime.pow_left n ∘ nat.coprime.pow_right n) coprimes },
-        rw nat.coprime_primes
-          (nat.prime_iff_prime.2 p_prime)
-          (nat.prime_iff_prime.2 q_prime),
+        by exact_mod_cast (nat.coprime.pow_left n $ nat.coprime.pow_right n coprimes),
+        rw nat.coprime_primes (nat.prime_iff_prime.2 p_prime) (nat.prime_iff_prime.2 q_prime),
         exact h,
       },
       use [(p^n).gcd_a (q^n), (p^n).gcd_b (q^n)],
-      rw ← p₁,
-      rw mul_comm _ (p^n: ℤ),
-      rw mul_comm _ (q^n: ℤ),
-      norm_cast,
-      exact nat.gcd_eq_gcd_ab (p^n) (q^n),
+      rw [← p₁, mul_comm _ (p^n: ℤ), mul_comm _ (q^n: ℤ)],
+      exact_mod_cast nat.gcd_eq_gcd_ab (p^n) (q^n),
     },
     have abv_rel_le_one: ∀ k: ℤ, abv k ≤ 1,
     {
       intro k,
       by_cases h: 0 < k,
       {
-        rw ← abs_of_pos h,
-        rw int.abs_eq_nat_abs,
+        rw [← abs_of_pos h, int.abs_eq_nat_abs],
         exact all_nat_le_one _,
       },
       {
-        simp at h,
-        rw ← abv_neg abv,
-        norm_cast,
-        rw ← abs_of_nonpos h,
-        rw int.abs_eq_nat_abs,
+        rw_mod_cast [← abv_neg abv, ← abs_of_nonpos $ not_lt.1 h, int.abs_eq_nat_abs],
         exact all_nat_le_one _,
       }
     },
@@ -316,8 +290,6 @@ begin
   obtain ⟨ p, p_prime, abvp_lt_one ⟩: ∃ p: ℕ, prime p ∧ abv p < 1,
   from prime_norm_lt_one_of_bounded_padic abv hnontriv all_nat_le_one,
 
-  -- set α := - real.log (abv p) / real.log p with α_def,
-
   obtain ⟨ α, zero_lt_α, abv_val ⟩ := abs_val_bounded_q abv all_nat_le_one p p_prime abvp_lt_one,
 
   -- We show that `abv` is equivalent to the p-adic norm on all primes.
@@ -347,10 +319,6 @@ begin
 
   -- Now we reason by induction, by using prime numbers as the base case.
   
-  set padic := λ q, (padic_norm p q: ℝ) with padic_def,
-  have padic_is_absolute_value: is_absolute_value padic,
-  from sorry, -- @padic_norm.is_absolute_value p (nat.prime_iff_prime.2 p_prime),
-
   have p_nat_prime := nat.prime_iff_prime.2 p_prime,
   have := @abs_val_equiv_of_equiv_on_primes (padic_norm_ℝ p) abv
     (@padic_is_abv p p_nat_prime) _

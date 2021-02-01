@@ -1,6 +1,6 @@
 import data.list.range
 
-open list
+namespace list
 
 lemma map_with_index_core_eq {α β : Type*} (l : list α) (f : ℕ → α → β) (n : ℕ) :
   l.map_with_index_core f n = l.map_with_index (λ i a, f (i + n) a) :=
@@ -169,3 +169,5 @@ begin
     rw [map_with_index_core_eq, map_with_index_core_eq, hl],
   },
 end
+
+end list

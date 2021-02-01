@@ -14,6 +14,7 @@ import tactic.linarith
 import topology.metric_space.basic
 
 import abvs_equiv
+import for_mathlib.exp_log
 import ostrowski.rationals.unbounded
 
 section
@@ -257,11 +258,27 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           intros a ha,
           exact not_lt.1 (nat.find_min exists_rat_unbounded ha),
         },
-        have n₀_ge_two: n₀ ≥ 2 := sorry, -- necessarily, n₀ ≥ 2.
-        have n₀_not_one: n₀ > 1 := lt_of_lt_of_le one_lt_two n₀_ge_two,
+        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1
+        have n₀_ge_two: n₀ ≥ 2 := sorry, 
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
-        have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α := sorry,
+        have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α,
+        {
+          rw [real.rpow_def_of_pos, h_α, ← mul_div_assoc, mul_div_cancel_left, real.exp_log],
+          apply (is_absolute_value.abv_pos abv).2,
+          apply ne_of_gt,
+          -- we throw this goal for now and we will focus on the log.
+          -- so we can provide the same proof for the two similar goals.
+          rotate 1,
+          apply real.log_ne_zero_of_ne_one,
+          rotate 1,
+          norm_cast,
+          exact ne_of_gt n₀_not_one,
+          all_goals {
+            norm_cast,
+            exact lt_trans zero_lt_one (by assumption),
+          }
+        },
         use α,
         have zero_lt_α: 0 < α,
         {

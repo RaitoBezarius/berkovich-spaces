@@ -11,6 +11,7 @@ import data.nat.basic
 import tactic.apply
 import tactic.linarith
 import topology.metric_space.basic
+import ring_theory.unique_factorization_domain
 
 import abvs_equiv
 
@@ -72,13 +73,13 @@ rw rat.mk_pnat,
 exact ne_of_gt x_pos,
 end
 
-def hom_of_abv {α} [linear_ordered_field α] {β} [ring β]
+def hom_of_abv {α} [linear_ordered_field α] {β} [ring β] [nontrivial β]
   (abv: β → α) [is_absolute_value abv]:
   monoid_with_zero_hom β α := {
     to_fun := abv,
-    map_zero' := sorry,
-    map_one' := sorry,
-    map_mul' := sorry,
+    map_zero' := abv_zero abv,
+    map_one' := abv_one abv,
+    map_mul' := abv_mul abv,
  }
 
 -- Deserves its place in matlib, as `monoid_with_zero_hom.map_inv`
@@ -194,10 +195,21 @@ def is_padic_norm
   (abv: ℚ → ℝ) [is_absolute_value abv] :=
     (λ r: ℚ, (padic_norm p r: ℝ)) = abv
 
-lemma induction_on_primes [P: nat → Prop] (base_case: ∀ p: ℕ, prime p → P p)
+lemma induction_on_primes [P: nat → Prop] (h₁: P 0) (h₂: P 1)
   (h: ∀ p a: ℕ, prime p → P a → P (p * a)): ∀ n: ℕ, P n :=
 begin
-  sorry
+  intro n,
+  apply unique_factorization_monoid.induction_on_prime,
+  exact h₁,
+  {
+    intros n h,
+    rw nat.is_unit_iff.1 h,
+    exact h₂,
+  },
+  {
+    intros a p _ hp ha,
+    exact h p a hp ha,
+  },
 end
 
 lemma prime_norm_lt_one_of_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
@@ -426,12 +438,30 @@ end
 lemma abs_val_bounded_q (abv : ℚ → ℝ) [habv : is_absolute_value abv]
   (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1))
   (p: ℕ) (p_prime: prime p) (abvp_lt_one: abv p < 1):
-  ∃ α: ℝ, ∀ q: ℕ, prime q →
+  ∃ α: ℝ, 0 < α ∧ ∀ q: ℕ, prime q →
     (p = q → abv q = (1/p) ^ α) ∧ (p ≠ q → abv q = 1 ^ α) :=
 begin
   -- We set `α` such that it Just Works™
   set α := - real.log (abv p) / real.log p with α_def,
-  use α,
+  have zero_lt_α: 0 < α,
+  {
+    apply div_pos,
+    have one_lt_abvp: abv p < 1,
+    {
+      rw ← gt_iff_lt,
+      exact abvp_lt_one,
+    },
+    apply neg_pos_of_neg,
+    have p_ne_zero_ℚ: (p: ℚ) ≠ 0,
+    { norm_cast, linarith only [nat.prime.pos $ nat.prime_iff_prime.2 p_prime], },
+    exact (real.log_neg_iff ((abv_pos abv).2 p_ne_zero_ℚ)).2
+      one_lt_abvp,
+    have p_pos_ℝ: 0 < (p: ℝ),
+    { norm_cast, exact (nat.prime.pos $ nat.prime_iff_prime.2 p_prime), },
+    exact (real.log_pos_iff p_pos_ℝ).2
+        (by { norm_cast, exact (nat.prime.one_lt $ nat.prime_iff_prime.2 p_prime), }),
+  },
+  use [α, zero_lt_α],
 
   intros q q_prime,
 
@@ -597,14 +627,31 @@ begin
   },
 end
 
+def hom_of_equiv (abv: ℚ → ℝ) [habv: is_absolute_value abv] (α: ℝ) (α_ne_zero: α ≠ 0):
+  monoid_with_zero_hom ℚ ℝ := {
+    to_fun := (λ r: ℚ, (abv r) ^ α),
+    map_zero' := by {
+      rw abv_zero abv,
+      exact real.zero_rpow α_ne_zero,
+    },
+    map_one' := by {
+      rw abv_one abv,
+      exact real.one_rpow α,
+    },
+    map_mul' := by {
+      intros x y,
+      rw abv_mul abv,
+      rw real.mul_rpow (abv_nonneg abv x) (abv_nonneg abv y),
+    },
+  }
+
 lemma abs_val_equiv_of_equiv_on_primes (abv abv': ℚ → ℝ)
   [habv: is_absolute_value abv] [habv': is_absolute_value abv']
-  (α: ℝ)
+  (α: ℝ) (α_ne_zero: α ≠ 0)
   (h: ∀ p: ℕ, prime p → (abv p) ^ α = abv' p): (λ r: ℚ, (abv r) ^ α) = abv' :=
 begin
   have: ∀ n: ℕ, (abv n) ^ α = abv' n,
   {
-    have base_case := h,
     have inductive_step: ∀ q a: ℕ, prime q → (abv a) ^ α = abv' a
       → (abv (q * a: ℕ)) ^ α = abv' ((q * a): ℕ),
     {
@@ -624,30 +671,67 @@ begin
           : by { norm_cast, },
     },
     apply induction_on_primes,
-    exact base_case,
+    {
+      norm_cast,
+      rw [abv_zero abv, abv_zero abv'],
+      rw real.zero_rpow,
+      exact α_ne_zero,
+    },
+    {
+      norm_cast,
+      rw [abv_one abv, abv_one abv'],
+      rw real.one_rpow,
+    },
     exact inductive_step,
   },
   
-  have comp_is_abv: is_absolute_value (λ r: ℚ, (abv r) ^ α),
-  { sorry },
   -- apply @rat_abs_val_eq_of_eq_on_pnat (λ r: ℚ, (abv r) ^ α) abv' comp_is_abv _,
   -- exact this,
-  sorry
+  /-
+  mul_mor_eq_of_eq_on_pnat (φ₁ φ₂: monoid_with_zero_hom ℚ ℝ)
+  (same_on_neg_one: φ₁ (-1) = φ₂ (-1)) (same_on_nat: ∀ n: ℕ, φ₁ n = φ₂ n): (φ₁: ℚ → ℝ) = φ₂
+  -/
+  set equiv_hom := hom_of_equiv abv α α_ne_zero with equiv_hom_def,
+  set abv'_hom := abv_hom abv' with abv'_hom_def,
+  have abv_eq_hom_fn: abv' = abv'_hom := rfl,
+  have equiv_abs_eq_hom_fn: (λ r: ℚ, abv r ^ α) = equiv_hom := rfl,
+  have same_on_neg_one: equiv_hom (-1) = abv'_hom (-1),
+  {
+    rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
+    simp,
+    rw [abv_neg abv, abv_neg abv'],
+    rw [abv_one abv, abv_one abv'],
+    rw real.one_rpow,
+  },
+  apply mul_mor_eq_of_eq_on_pnat equiv_hom abv'_hom same_on_neg_one,
+
+  exact this, 
 end
+
+def padic_norm_ℝ (p: ℕ) := λ r: ℚ, (padic_norm p r: ℝ)
+
+instance abv_lift (abv: ℚ → ℚ) [habv: is_absolute_value abv]:
+  is_absolute_value (λ r: ℚ, (abv r: ℝ)) :=
+{ abv_nonneg := by { norm_cast, exact abv_nonneg abv, },
+  abv_eq_zero := by { norm_cast, intro x, exact abv_eq_zero abv, },
+  abv_add := by { norm_cast, exact abv_add abv, },
+  abv_mul := by { norm_cast, exact abv_mul abv, } }
+
+instance padic_is_abv {p: ℕ} [hp: nat.prime p] : is_absolute_value (padic_norm_ℝ p) :=
+  @abv_lift (padic_norm p) (@padic_norm.is_absolute_value p hp)
 
 lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
       (hnontriv: abv ≠ trivial_abs)
       (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
       ∃ (p) [hp: nat.prime p],
-      -- ∃ α: ℝ, abv = equiv_abs α
-      @is_padic_norm p hp abv _ :=
+      @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp) :=
 begin
   obtain ⟨ p, p_prime, abvp_lt_one ⟩: ∃ p: ℕ, prime p ∧ abv p < 1,
   from prime_norm_lt_one_of_bounded_padic abv hnontriv all_nat_le_one,
 
-  set α := - real.log (abv p) / real.log p with α_def,
+  -- set α := - real.log (abv p) / real.log p with α_def,
 
-  obtain ⟨ α, abv_val ⟩ := abs_val_bounded_q abv all_nat_le_one p p_prime abvp_lt_one,
+  obtain ⟨ α, zero_lt_α, abv_val ⟩ := abs_val_bounded_q abv all_nat_le_one p p_prime abvp_lt_one,
 
   -- We show that `abv` is equivalent to the p-adic norm on all primes.
   have same_on_primes: ∀ q: ℕ, prime q → (padic_norm p q: ℝ) ^ α = abv q,
@@ -680,11 +764,16 @@ begin
   have padic_is_absolute_value: is_absolute_value padic,
   from sorry, -- @padic_norm.is_absolute_value p (nat.prime_iff_prime.2 p_prime),
 
-  have := @abs_val_equiv_of_equiv_on_primes padic abv
-    padic_is_absolute_value _
-    α same_on_primes,
+  have p_nat_prime := nat.prime_iff_prime.2 p_prime,
+  have := @abs_val_equiv_of_equiv_on_primes (padic_norm_ℝ p) abv
+    (@padic_is_abv p p_nat_prime) _
+    α (ne.symm $ ne_of_lt zero_lt_α) same_on_primes,
   
-  sorry  
+  use [p, p_nat_prime],
+  apply abvs_equiv_symmetric,
+  use [α, zero_lt_α],
+
+  exact this,
 end
 
 -- all_nat_le_one become all_int_le_one
@@ -804,7 +893,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
     (abvs_equiv abv (λ x: ℚ, abs x))
     ∨
     (∃ (p) [hp: nat.prime p],
-        @is_padic_norm p hp abv _) :=
+        @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp)) :=
     begin
         by_cases boundness : ∀ z : ℕ, abv z ≤ 1,
         {

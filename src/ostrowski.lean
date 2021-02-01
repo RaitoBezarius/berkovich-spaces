@@ -245,18 +245,18 @@ def hom_of_equiv_abs (α: ℝ) (α_ne_zero: α ≠ 0):
 
 lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     [habv : is_absolute_value abv]
-    (exists_rat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
+    (exists_nat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
     --∃ α: ℝ, abv = equiv_abs α :=
     abvs_equiv abv (λ x: ℚ, abs x) :=
     begin
-        push_neg at exists_rat_unbounded,
+        push_neg at exists_nat_unbounded,
         -- we want the smallest.
-        set n₀ := nat.find exists_rat_unbounded,
-        have n₀_spec := nat.find_spec exists_rat_unbounded,
+        set n₀ := nat.find exists_nat_unbounded,
+        have n₀_spec := nat.find_spec exists_nat_unbounded,
         have n₀_smallest_spec: ∀ (a: ℕ), a < n₀ → abv a ≤ 1,
         {
           intros a ha,
-          exact not_lt.1 (nat.find_min exists_rat_unbounded ha),
+          exact not_lt.1 (nat.find_min exists_nat_unbounded ha),
         },
         have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1
         have n₀_ge_two: n₀ ≥ 2 := sorry, 

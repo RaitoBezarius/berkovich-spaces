@@ -10,8 +10,7 @@ end
 
 lemma real.ne_one_of_log_ne_zero (x: ℝ) (hx_pos: 0 < x) (hlog: real.log x ≠ 0): x ≠ 1 :=
 begin
-  by_cases (0 < real.log x),
   sorry, -- we don't really care.
 end
 
-lemma real.log_ne_zero_iff (x: ℝ): (real.log x ≠ 0 ↔ x ≠ 1) := sorry
+lemma real.log_eq_zero_iff (x: ℝ): (real.log x = 0 ↔ x = 1) := sorry

@@ -26,7 +26,7 @@ begin
 end
 
 lemma real.finite_geom_sum_le_infinite_geom_sum_of_lt_1
-  {x: ℝ} {n: ℕ} (x_nonneg: 0 ≤ x) (h: x < 1):
+  {x: ℝ} (n: ℕ) (x_nonneg: 0 ≤ x) (h: x < 1):
   geom_series x n ≤ ∑' k: ℕ, x ^ k :=
 begin
   sorry,
@@ -35,7 +35,7 @@ end
 -- can be generalized.
 lemma geom_sum_eq_factor_inv_geom_sum
   (x: ℝ) (n: ℕ):
-  geom_series x n = (x ^ n) * geom_series (x⁻¹) n :=
+  geom_series x n = (x ^ (n - 1)) * geom_series (x⁻¹) n :=
 begin
   rw ← geom_sum_of_sum_of_range_map,
   rw ← geom_sum_of_sum_of_range_map,

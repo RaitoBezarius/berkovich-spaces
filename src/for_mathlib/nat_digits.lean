@@ -39,3 +39,21 @@ begin
   simp at this,
   rw [← this, list.map_map_with_index],
 end
+
+lemma one_le_of_nonzero_digits_length
+  (n b: ℕ) (hn: n ≠ 0):
+  1 ≤ (b.digits n).length :=
+begin
+  induction n with d hd,
+  exact absurd rfl hn,
+  cases b,
+  { simp },
+  { 
+    cases b,
+    { simp },
+    { dsimp [nat.digits],
+      rw nat.digits_aux,
+      simp only [list.length, zero_le, le_add_iff_nonneg_left],
+    }
+  },
+end

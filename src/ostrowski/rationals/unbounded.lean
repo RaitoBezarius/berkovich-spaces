@@ -4,10 +4,12 @@ import analysis.special_functions.pow
 
 import for_mathlib.nat_digits
 import for_mathlib.geom_sum
+import for_mathlib.valuations
+import for_mathlib.specific_limits
 
 lemma exists_nonneg_const_nat_abs_le_const_mul_pow_alpha
-  (abv: ℚ → ℝ) [habv: is_absolute_value abv]
-  (n₀: ℕ) (α: ℝ) 
+  {abv: ℚ → ℝ} [habv: is_absolute_value abv]
+  {n₀: ℕ} {α: ℝ} 
   (h_exponent_pos: 0 < α)
   (h_n0_ge_2: n₀ ≥ 2)
   (h_abv_n0: abv n₀ = (n₀: ℝ) ^ α)
@@ -15,7 +17,7 @@ lemma exists_nonneg_const_nat_abs_le_const_mul_pow_alpha
   (h_smallest: ∀ (a: ℕ), a < n₀ → abv a ≤ 1):
   ∃ (C: ℝ) (C_pos: C > 0), ∀ (n: ℕ), abv n ≤ C * n^α :=
 begin
-  set C := (n₀: ℝ)^α / ((n₀: ℝ)^α - 1),
+  set C := (1 - ((n₀: ℝ) ^ α)⁻¹)⁻¹ with hc,
   use C,
   have h_n0_pow_alpha_pos: 0 < (n₀: ℝ)^α,
   {
@@ -24,18 +26,25 @@ begin
     norm_cast,
     exact h_n0_ge_2,
   },
-  split,
+  have h_n0_pow_alpha_inv_lt_one: ((n₀: ℝ) ^ α)⁻¹ < 1,
   {
-    apply div_pos,
-    exact h_n0_pow_alpha_pos,
-    simp,
-    refine real.one_lt_rpow _ h_exponent_pos,
-    refine lt_of_lt_of_le one_lt_two _,
-    norm_cast,
-    exact h_n0_ge_2
+      apply inv_lt_one,
+      rw h_abv_n0 at h_abv_n0_gt_one,
+      exact h_abv_n0_gt_one,
   },
+  have C_pos: C > 0,
+  {
+    apply inv_pos.1,
+    rw [hc, inv_inv', sub_pos],
+    exact h_n0_pow_alpha_inv_lt_one,
+  },
+  split,
+  { exact C_pos },
   {
     intro n,
+    by_cases hn: n = 0,
+    rw_mod_cast [hn, is_absolute_value.abv_zero abv, real.zero_rpow, mul_zero],
+    exact ne_of_gt h_exponent_pos,
     set base_repr := n₀.digits n with h_base_repr,
     have h_coeff_abv_pos: ∀ (a: ℕ), a ∈ base_repr → abv a ≤ 1,
     {
@@ -48,48 +57,81 @@ begin
       (λ (i a: ℕ), (abv a) * ((n₀: ℝ) ^ α) ^ i) i (list.nth_le base_repr i hi) ≤ (λ (i a: ℕ), ((n₀: ℝ) ^ α) ^ i) i (list.nth_le base_repr i hi),
     {
       intros i hi,
-      simp,
+      simp only,
       convert mul_le_mul (h_coeff_abv_pos _ (list.nth_le_mem base_repr i hi)) (le_refl _) _ zero_le_one,
       rw one_mul,
-      apply le_of_lt,
-      exact pow_pos h_n0_pow_alpha_pos _,
+      exact le_of_lt (pow_pos h_n0_pow_alpha_pos _),
     },
-    have h_abs_of_n0_pow_alpha_inv_lt_one: abs (((n₀: ℝ) ^ α)⁻¹) < 1,
+    have h_n0_pow_alpha_inv_nonneg: 0 ≤ ((n₀: ℝ) ^ α)⁻¹,
+    from inv_nonneg.2 (le_of_lt h_n0_pow_alpha_pos),
+    have h_n0_pow_alpha_pow_len_pos: 0 < ((n₀: ℝ) ^ α) ^ (base_repr.length),
+    from pow_pos (h_n0_pow_alpha_pos) _,
+    have h_n0_pow_alpha_pow_len_le_n_pow_alpha: ((n₀: ℝ) ^ α) ^ (base_repr.length - 1) ≤ (n: ℝ) ^ α,
     {
-      sorry,
-    },  
+      have h_n0_nonneg: 0 ≤ n₀, from le_trans zero_le_two h_n0_ge_2,
+      suffices: ((n₀: ℝ) ^ α) ^ (base_repr.length - 1) = ((n₀: ℝ) ^ (base_repr.length - 1)) ^ α,
+      {
+        rw this,
+        apply real.rpow_le_rpow,
+        apply pow_nonneg,
+        norm_cast,
+        exact h_n0_nonneg,
+        rw h_base_repr,
+        norm_cast,
+        apply (mul_le_mul_right (lt_of_lt_of_le zero_lt_two h_n0_ge_2)).1,
+        rw [← pow_succ', nat.sub_add_cancel],
+        conv_rhs {
+          rw mul_comm,
+        },
+        apply nat.base_pow_length_digits_le _ n h_n0_ge_2 hn,
+        exact one_le_of_nonzero_digits_length _ _ hn,
+        exact le_of_lt h_exponent_pos,
+      },
+      rw [← real.rpow_nat_cast _ (base_repr.length - 1), ← real.rpow_mul, mul_comm,
+          real.rpow_mul, real.rpow_nat_cast _ (base_repr.length - 1)],
+      all_goals { norm_cast, exact h_n0_nonneg },
+    },
     exact calc (abv n: ℝ) = abv (nat.of_digits n₀ base_repr) : by rw_mod_cast [h_base_repr, nat.of_digits_digits n₀ n]
     ... = abv (list.sum (base_repr.map_with_index (λ i a, a * (n₀: ℚ) ^ i))) : fun_of_digits_eq_fun_of_sum_map_with_index abv n₀ base_repr
     ... ≤ list.sum (base_repr.map_with_index (λ i a, abv ((a: ℚ) * (n₀ : ℚ) ^ i))) : by { rw ← list.map_map_with_index, exact list.abv_sum_le_sum_abv abv _ }
-    ... = list.sum (base_repr.map_with_index (λ i a, (abv a) * (abv n₀) ^ i)) : by simp [abv_mul abv, abv_pow abv]
+    ... = list.sum (base_repr.map_with_index (λ i a, (abv a) * (abv n₀) ^ i)) : by simp [is_absolute_value.abv_mul abv, is_absolute_value.abv_pow abv]
     ... = list.sum (base_repr.map_with_index (λ (i a: ℕ), (abv a) * ((n₀: ℝ) ^ α) ^ i)) : by rw_mod_cast h_abv_n0
-    ... ≤ list.sum (base_repr.map_with_index (λ (i a: ℕ), ((n₀: ℝ) ^ α) ^ i)) : sorry -- by { rw_mod_cast list.le_map_with_index _ _ base_repr h_coeff_fun_abv_pos }
-    ... = list.sum (list.map (λ i, ((n₀: ℝ) ^ α) ^ i) (list.range base_repr.length)) : by rw list.map_with_index_eq_range_map (λ i a, ((n₀ : ℝ) ^ α) ^ i) (λ i, ((n₀ : ℝ) ^ α) ^ i) base_repr (by simp)
+    ... ≤ list.sum (base_repr.map_with_index (λ (i a: ℕ), ((n₀: ℝ) ^ α) ^ i)) : by rw_mod_cast list.le_map_with_index h_coeff_fun_abv_pos
+    ... = list.sum (list.map (pow ((n₀: ℝ) ^ α)) (list.range base_repr.length)) : by rw list.map_with_index_eq_range_map (λ i a, ((n₀ : ℝ) ^ α) ^ i) (λ i, ((n₀ : ℝ) ^ α) ^ i) base_repr (by simp)
     ... = geom_series ((n₀: ℝ) ^ α) (base_repr.length) : geom_sum_of_sum_of_range_map ((n₀: ℝ) ^ α) base_repr.length
-    ... = (n₀ ^ α) ^ (base_repr.length) * geom_series (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : geom_sum_eq_factor_inv_geom_sum _ _
-    ... ≤ (n₀ ^ α) ^ (base_repr.length) * ∑' n: ℕ, (((n₀: ℝ) ^ α)⁻¹) ^ n : sorry -- (mul_le_mul_left h_n0_pow_alpha_pos).2 (real.finite_geom_sum_le_infinite_geom_sum _ _ (by assumption))
-    ... = (n₀ ^ α) ^ (base_repr.length) * C : sorry
-    ... ≤ C * n^α : sorry,
+    ... = (n₀ ^ α) ^ (base_repr.length - 1) * geom_series (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : geom_sum_eq_factor_inv_geom_sum _ _
+    ... ≤ (n₀ ^ α) ^ (base_repr.length - 1) * ∑' n: ℕ, (((n₀: ℝ) ^ α)⁻¹) ^ n : (mul_le_mul_left h_n0_pow_alpha_pow_len_pos).2 $ real.finite_geom_sum_le_infinite_geom_sum_of_lt_1 h_n0_pow_alpha_inv_nonneg (by assumption)
+    ... = (n₀ ^ α) ^ (base_repr.length - 1) * C : by erw tsum_geometric_of_lt_1 (inv_nonneg.2 (le_of_lt h_n0_pow_alpha_pos)) h_n0_pow_alpha_inv_lt_one
+    ... ≤ n^α * C : (mul_le_mul_right C_pos).2 h_n0_pow_alpha_pow_len_le_n_pow_alpha
+    ... = C * n^α : mul_comm _ _,
   },
 end
 
-lemma nat_abs_val_le_nat_pow_alpha (abv: ℚ → ℝ)
-  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ) (α: ℝ)
-  (abv_n0_eq_cst: abv n₀ = n₀^α):
+lemma nat_abs_val_le_nat_pow_alpha {abv: ℚ → ℝ}
+  [habv: is_absolute_value abv] {n₀: ℕ} {n: ℕ} {α: ℝ}
+  (h_exponent_pos: 0 < α)
+  (h_n0_ge_2: n₀ ≥ 2)
+  (h_abv_n0: abv n₀ = (n₀: ℝ) ^ α)
+  (h_abv_n0_gt_one: abv n₀ > 1)
+  (h_smallest: ∀ (a: ℕ), a < n₀ → abv a ≤ 1):
   (abv n: ℝ) ≤ n^α :=
 begin
-    have n_nonneg: 0 < (n: ℝ) := sorry,
     obtain ⟨ C, ⟨ C_pos, abv_pos ⟩ ⟩ := 
-      exists_nonneg_const_nat_abs_le_const_mul_pow_alpha abv n α,
+      exists_nonneg_const_nat_abs_le_const_mul_pow_alpha 
+      h_exponent_pos h_n0_ge_2 h_abv_n0 h_abv_n0_gt_one h_smallest,
     have h_nthroot: ∀ᶠ (N: ℕ) in filter.at_top, abv n ≤ C^((1:ℝ)/N) * n^α,
     {
       simp,
       use 1,
       intros N N_pos,
+      by_cases hn: n = 0,
+      rw_mod_cast [hn, 
+        is_absolute_value.abv_zero abv,
+        real.zero_rpow (ne_of_gt h_exponent_pos), mul_zero],
       have C_pow_pos: 0 < C^((N: ℝ)⁻¹), from real.rpow_pos_of_pos C_pos _,
-      have n_pow_alpha_pos: 0 < (n: ℝ)^α, from real.rpow_pos_of_pos n_nonneg _,
-      have N_nonneg: 0 < (N: ℝ), by norm_cast; exact lt_of_lt_of_le zero_lt_one N_pos,
-      apply (real.rpow_le_rpow_iff _ _ N_nonneg).1,
+      have n_pow_alpha_pos: 0 < (n: ℝ)^α, from real.rpow_pos_of_pos (by exact_mod_cast nat.pos_of_ne_zero hn) _,
+      have N_pos: 0 < (N: ℝ), by norm_cast; exact lt_of_lt_of_le zero_lt_one N_pos,
+      apply (real.rpow_le_rpow_iff _ _ N_pos).1,
       -- |n|^N ≤ (C^(1/N)*n^α)^N
       {
         convert abv_pos (n ^ N),
@@ -97,7 +139,7 @@ begin
         {
           simp,
           symmetry,
-          exact abv_pow abv n N,
+          exact is_absolute_value.abv_pow abv n N,
         },
         -- (C^(1/N)n^α)^N = C(n^N)^α
         {

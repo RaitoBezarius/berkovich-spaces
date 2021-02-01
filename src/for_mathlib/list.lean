@@ -51,7 +51,7 @@ begin
     simp [list.enum_eq_zip_range, list.range_succ_eq_map, list.zip_with_map_left] }
 end
 
-@[simp] lemma list.sum_zip_with_distrib_left {α β : Type*} (f : α → β → ℕ) (n : ℕ) (l : list α) (l' : list β) :
+@[simp] lemma list.sum_zip_with_distrib_left {α β γ} [semiring γ] (f : α → β → γ) (n : γ) (l : list α) (l' : list β) :
   (list.zip_with (λ x y, n * f x y) l l').sum = n * (l.zip_with f l').sum :=
 begin
   induction l with hd tl hl generalizing f n l',
@@ -59,6 +59,16 @@ begin
   { cases l' with hd' tl',
     { simp, },
     { simp [hl, mul_add] } }
+end
+
+@[simp] lemma list.sum_zip_with_distrib_right {α β γ} [semiring γ] (f : α → β → γ) (n : γ) (l : list α) (l' : list β) :
+  (list.zip_with (λ x y, f x y * n) l l').sum = (l.zip_with f l').sum * n :=
+begin
+  induction l with hd tl hl generalizing f n l',
+  { simp },
+  { cases l' with hd' tl',
+    { simp, },
+    { simp [hl, add_mul] } }
 end
 
 lemma list.map_map_with_index_core {α β γ} (f : ℕ → α → β) (g : β → γ) : ∀ (l : list α) n,
@@ -69,7 +79,7 @@ by intros; induction l generalizing n; simp [*, list.map_with_index_core]
   (l.map_with_index f).map g = l.map_with_index (λ i a, g (f i a)) :=
 list.map_map_with_index_core _ _ _ _
 
-lemma list.le_map_with_index {α β} (f g: ℕ → α → β) [canonically_linear_ordered_add_monoid β] (l: list α):
+lemma list.le_map_with_index {α β} {f g: ℕ → α → β} [canonically_linear_ordered_add_monoid β] {l: list α}:
   (∀ (i: ℕ) (i_le: i < l.length), f i (list.nth_le l i i_le) ≤ g i (list.nth_le l i i_le)) → (l.map_with_index f).sum ≤ (l.map_with_index g).sum :=
 begin
   intro h_f_le,
@@ -80,7 +90,7 @@ begin
     apply add_le_add,
     convert h_f_le 0 _,
     simp,
-    convert hl _ _ _,
+    convert hl _,
     intros i hi,
     convert h_f_le (i + 1) _,
     simp [hi],

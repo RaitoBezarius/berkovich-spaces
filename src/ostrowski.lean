@@ -252,7 +252,13 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         -- we want the smallest.
         set n₀ := nat.find exists_rat_unbounded,
         have n₀_spec := nat.find_spec exists_rat_unbounded,
-        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1.
+        have n₀_smallest_spec: ∀ (a: ℕ), a < n₀ → abv a ≤ 1,
+        {
+          intros a ha,
+          exact not_lt.1 (nat.find_min exists_rat_unbounded ha),
+        },
+        have n₀_ge_two: n₀ ≥ 2 := sorry, -- necessarily, n₀ ≥ 2.
+        have n₀_not_one: n₀ > 1 := lt_of_lt_of_le one_lt_two n₀_ge_two,
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
         have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α := sorry,
@@ -292,10 +298,11 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         have: abv n = n ^ α :=
         begin
           apply le_antisymm,
-          -- apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
-          -- apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
+          apply nat_abs_val_le_nat_pow_alpha
+           zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
+           n₀_smallest_spec,
           sorry,
-          sorry,
+          -- apply nat_pow_alpha_le_nat_abs_val,
         end,
         rw this,
         congr' 1,

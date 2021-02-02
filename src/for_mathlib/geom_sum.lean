@@ -15,7 +15,7 @@ lemma geom_sum_of_sum_of_map_with_index {α} [semiring α] (x: α) (l: list α):
 by simp [← geom_sum_of_sum_of_range_map x (l.length), list.map_with_index_eq_range_map (λ i a, x ^ i) (λ i, x ^ i)]
 
 lemma real.finite_geom_sum_le_infinite_geom_sum_of_abs_lt_1
-  (x: ℝ) (n: ℕ) (x_nonneg: 0 ≤ x) (h: abs x < 1):
+  {x: ℝ} (n: ℕ) (x_nonneg: 0 ≤ x) (h: abs x < 1):
   geom_series x n ≤ ∑' k: ℕ, x ^ k :=
 begin
   apply sum_le_tsum,
@@ -29,7 +29,8 @@ lemma real.finite_geom_sum_le_infinite_geom_sum_of_lt_1
   {x: ℝ} (n: ℕ) (x_nonneg: 0 ≤ x) (h: x < 1):
   geom_series x n ≤ ∑' k: ℕ, x ^ k :=
 begin
-  sorry,
+  rw ← abs_eq_self.2 x_nonneg at h,
+  exact real.finite_geom_sum_le_infinite_geom_sum_of_abs_lt_1 n x_nonneg h,
 end
 
 -- can be generalized to 'semifield', but we do not have them.

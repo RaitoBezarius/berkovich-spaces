@@ -216,7 +216,49 @@ lemma exists_nonneg_const_pow_alpha_le_abs_nat
   (h_abv_n0: abv n₀ = (n₀: ℝ) ^ α)
   (h_abv_n0_gt_one: abv n₀ > 1)
   (h_smallest: ∀ (a: ℕ), a < n₀ → abv a ≤ 1):
-  ∃ (C: ℝ) (C_pos: C > 0), ∀ (n: ℕ), C * n^α ≤ abv n := sorry
+  ∃ (C: ℝ) (C_pos: C > 0), ∀ (n: ℕ), C * n^α ≤ abv n :=
+begin
+  set C := (1 - (1 - (n₀: ℝ)⁻¹) ^ α),
+  have C_pos: C > 0,
+  {
+    sorry,
+  },
+  use C,
+  split,
+  {
+    exact C_pos,
+  },
+  {
+    intro n,
+    by_cases (n = 0),
+    rw_mod_cast [h, real.zero_rpow, is_absolute_value.abv_zero abv, mul_zero],
+    exact ne_of_gt h_exponent_pos,
+    set base_repr := n₀.digits n,
+    set s := base_repr.length,
+    have aux1: abv (n₀ ^ (s + 1) - n) ≤ (n₀ ^ (s + 1) - n) ^ α,
+    {
+      -- apply lemma 1.1
+      sorry,
+    },
+    have aux2: ((n₀: ℝ) ^ (s + 1) - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * (s + 1)) * (1 - (n₀: ℝ)⁻¹) ^ α,
+    {
+      sorry,
+    },
+    have aux3: (n: ℝ) ^ α ≤ (n₀: ℝ) ^ (α * (s + 1)),
+    {
+      sorry,
+    },
+    calc abv n = abv (n₀ ^ (s + 1) - (n₀ ^ (s + 1) - n)) : by abel
+    ... ≥ abv (n₀ ^ (s + 1)) - abv (n₀ ^ (s + 1) - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _
+    ... = (abv n₀) ^ (s + 1) - abv (n₀ ^ (s + 1) - n) : by rw is_absolute_value.abv_pow abv _ _
+    ... ≥ (abv n₀) ^ (s + 1) - (n₀ ^ (s + 1) - n) ^ α : sorry
+    ... = (n₀ ^ α) ^ (s + 1) - (n₀ ^ (s + 1) - n) ^ α : by rw h_abv_n0
+    ... = n₀ ^ (α * (s + 1)) - (n₀ ^ (s + 1) - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
+    ... ≥ n₀ ^ (α * (s + 1)) - (n₀ ^ (s + 1) - n₀ ^ α) ^ α : sorry
+    ... = C * n₀ ^ (α * (s + 1)) : sorry
+    ... ≥ C * n ^ α : (mul_le_mul_left C_pos).2 aux3,
+  }
+end
 
 lemma nat_pow_alpha_le_nat_abs_val (abv: ℚ → ℝ)
   [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ) (α: ℝ):

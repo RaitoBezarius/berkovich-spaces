@@ -3,12 +3,13 @@ import analysis.special_functions.exp_log
 import analysis.special_functions.pow
 import data.real.cau_seq
 
+import for_mathlib.padic_norm
 import ostrowski.rationals.basic
 import abvs_equiv
 
 open list is_absolute_value
 
-lemma prime_norm_lt_one_of_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
+lemma exist_prime_abv_lt_one_of_bounded (abv : ℚ → ℝ) [habv : is_absolute_value abv]
       (hnontriv: abv ≠ trivial_abs)
       (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
       ∃ p: ℕ, prime p ∧ abv p < 1 :=
@@ -24,7 +25,7 @@ begin
     have abv_hom_f: abv = abv_hom := by refl,
     have triv_hom_f: trivial_abs = triv_hom := by refl,
     rw [abv_hom_f, triv_hom_f],
-    apply mul_mor_eq_of_eq_on_pnat,
+    apply ext_hom_pnat,
     {
       rw [← abv_hom_f, ← triv_hom_f],
       rw [abv_neg abv, abv_neg trivial_abs],
@@ -55,7 +56,7 @@ begin
     push_cast,
     rw abv_mul abv,
     have abvp_eq_one: abv p = 1,
-    { by linarith [h p p_prime, all_nat_le_one p], },
+    { by linarith [h p (nat.prime_iff_prime.1 p_prime), all_nat_le_one p], },
     rw abvp_eq_one,
     have a_ne_zero: a ≠ 0,
     { by_contra h, push_neg at h, apply hprod, simp [h], },
@@ -67,52 +68,9 @@ end
 lemma padic_norm_q (p: ℕ) (q: ℕ) (p_prime: prime p) (q_prime: prime q):
   (p = q → padic_norm p q = 1/p) ∧ (p ≠ q → padic_norm p q = 1) :=
 begin
-  split,
-  {
-    intro h, -- In the case where `p = q`
-    have p: padic_val_rat p q = 1,
-    {
-      rw ← h,
-      unfold padic_val_rat,
-      simp [p_prime.1, prime.ne_one p_prime],
-    },
-    unfold padic_norm,
-    rw p,
-    simp [q_prime.1],
-  },
-  {
-    intro h, -- In the case where `p ≠ q`
-    have p: padic_val_rat p q = 0,
-    {
-      unfold padic_val_rat,
-      simp [q_prime.1, prime.ne_one p_prime],
-      suffices h: p^0 ∣ q ∧ ¬ p^1 ∣ q,
-      {
-        norm_cast,
-        rw roption.get_eq_iff_eq_some,
-        rw multiplicity.eq_some_iff.2 h,
-        refl,
-      },
-      split,
-      {
-        simp,
-      },
-      {
-        by_contra p_div_q,
-        apply h,
-        rw ← associated_iff_eq,
-        simp at p_div_q,
-        have q_div_p := dvd_symm_of_irreducible
-          (irreducible_of_prime p_prime)
-          (irreducible_of_prime q_prime)
-          p_div_q,
-        exact associated_of_dvd_dvd p_div_q q_div_p,
-      },
-    },
-    unfold padic_norm,
-    rw p,
-    simp [q_prime.1],
-  },
+  split; intro h,
+  rw [← h, @padic_norm.padic_norm_p_of_prime p (nat.prime_iff_prime.2 p_prime)],
+  rw [@padic_norm_primes p q (nat.prime_iff_prime.2 p_prime) (nat.prime_iff_prime.2 q_prime) h],
 end
 
 lemma abs_val_bounded_q (abv : ℚ → ℝ) [habv : is_absolute_value abv]
@@ -145,9 +103,14 @@ begin
   split,
   intro h,
   {
-    -- When `p = q`, we just need to show that `abv p = p ^ (- α)`.
     have p_pos: 0 < (p: ℝ),
+    -- When `p = q`, we just need to show that `abv p = p ^ (- α)`.
     { norm_cast, exact nat.lt_of_le_and_ne (zero_le p) (ne.symm (p_prime.1)), },
+    have one_lt_p: 1 < p,
+    from (nat.prime.one_lt ∘ nat.prime_iff_prime.2) p_prime,
+    have logp_nonzero: real.log p ≠ 0,
+    { apply ne.symm ∘ ne_of_lt ∘ real.log_pos,
+          exact_mod_cast one_lt_p, },
     -- The result is clear by definition of `α`.
     -- The calculus that leads to it is yet long to formalize...
     rw ← h,
@@ -163,13 +126,10 @@ begin
       },
       from (real.rpow_pos_of_pos $ one_div_pos.2 p_pos) α,
     },
-    have one_lt_p: 1 < p,
-    from (nat.prime.one_lt ∘ nat.prime_iff_prime.2) p_prime,
     calc real.log (abv p) = real.log (abv p) * 1
-        : by ring
+        : eq.symm (mul_one _)
       ... = real.log (abv p) * (real.log p / real.log p)
-        : by { rw div_self, symmetry, apply ne_of_lt ∘ real.log_pos,
-          norm_cast, exact one_lt_p, }
+        : by { rw div_self, apply logp_nonzero, }
       ... = real.log (abv p) / real.log p * real.log p
         : by ring
       ... = real.log (p^(real.log (abv p) / real.log p))
@@ -271,6 +231,7 @@ begin
         ... < 1/2 + 1/2                             : add_lt_add abvpn_lt_half abvqn_lt_half
         ... = 1                                     : by ring,
     },
+    -- Maybe find a prettier approach ?
     have absurd: (1: ℝ) < 1,
     {
       calc 1 = abv (1: ℤ)             : eq.symm (abv_one abv)
@@ -288,7 +249,7 @@ lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_valu
       @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp) :=
 begin
   obtain ⟨ p, p_prime, abvp_lt_one ⟩: ∃ p: ℕ, prime p ∧ abv p < 1,
-  from prime_norm_lt_one_of_bounded_padic abv hnontriv all_nat_le_one,
+  from exist_prime_abv_lt_one_of_bounded abv hnontriv all_nat_le_one,
 
   obtain ⟨ α, zero_lt_α, abv_val ⟩ := abs_val_bounded_q abv all_nat_le_one p p_prime abvp_lt_one,
 

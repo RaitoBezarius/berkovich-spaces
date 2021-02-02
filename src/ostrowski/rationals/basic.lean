@@ -6,6 +6,9 @@ import analysis.special_functions.pow
 import data.real.cau_seq
 import data.padics
 
+import for_mathlib.hom
+import for_mathlib.nat_primes
+
 open is_absolute_value
 noncomputable theory
 
@@ -14,10 +17,10 @@ def trivial_abs : ℚ → ℝ := λ a,
     else 1
 
 instance : is_absolute_value trivial_abs :=
-{ abv_nonneg := λ x, begin rw [trivial_abs], dsimp, split_ifs, exact le_refl 0, exact zero_le_one, end,
-  abv_eq_zero := λ x, begin rw [trivial_abs], dsimp, split, contrapose!, intro, rw if_neg ᾰ, norm_num, intro, rw if_pos ᾰ, end,
-  abv_add := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals { linarith,}, exfalso, rw [h_1,h_2] at h, simpa using h, end,
-  abv_mul := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals {norm_num}, finish, finish, finish, finish, end }
+{ abv_nonneg := λ x, by { rw [trivial_abs], dsimp, split_ifs, exact le_refl 0, exact zero_le_one, },
+  abv_eq_zero := λ x, by { rw [trivial_abs], dsimp, split, contrapose!, intro, rw if_neg ᾰ, norm_num, intro, rw if_pos ᾰ, },
+  abv_add := λ x y, by { rw [trivial_abs], dsimp, split_ifs, any_goals { linarith,}, exfalso, rw [h_1,h_2] at h, simpa using h, },
+  abv_mul := λ x y, by { rw [trivial_abs], dsimp, split_ifs, any_goals {norm_num}, finish, finish, finish, finish, } }
 
 def padic_norm_ℝ (p: ℕ) := λ r: ℚ, (padic_norm p r: ℝ)
 
@@ -87,35 +90,8 @@ def hom_of_equiv (abv: ℚ → ℝ) [habv: is_absolute_value abv] (α: ℝ) (α_
     },
   }
 
--- Deserves its place in matlib, as `monoid_with_zero_hom.map_inv`
-theorem Γ₀_map_inv {G₁ G₂: Type} [group_with_zero G₁] [group_with_zero G₂]
-  (φ: monoid_with_zero_hom G₁ G₂) (a: G₁) (a_ne_zero: a ≠ 0): φ a⁻¹ = (φ a)⁻¹ :=
-begin
-  apply eq_inv_of_mul_left_eq_one,
-  rw ← monoid_with_zero_hom.map_mul,
-  rw inv_mul_cancel a_ne_zero,
-  rw monoid_with_zero_hom.map_one,
-end
-
-lemma induction_on_primes [P: nat → Prop] (h₁: P 0) (h₂: P 1)
-  (h: ∀ p a: ℕ, prime p → P a → P (p * a)): ∀ n: ℕ, P n :=
-begin
-  intro n,
-  apply unique_factorization_monoid.induction_on_prime,
-  exact h₁,
-  {
-    intros n h,
-    rw nat.is_unit_iff.1 h,
-    exact h₂,
-  },
-  {
-    intros a p _ hp ha,
-    exact h p a hp ha,
-  },
-end
-
 -- Integer values of a morphism `φ` and its value on `-1` completely determines `φ`
-theorem mul_mor_eq_of_eq_on_pnat (φ₁ φ₂: monoid_with_zero_hom ℚ ℝ)
+theorem ext_hom_pnat (φ₁ φ₂: monoid_with_zero_hom ℚ ℝ)
   (same_on_neg_one: φ₁ (-1) = φ₂ (-1)) (same_on_nat: ∀ n: ℕ, φ₁ n = φ₂ n): (φ₁: ℚ → ℝ) = φ₂ :=
 begin
   ext,
@@ -131,9 +107,9 @@ begin
       exact (ne_of_lt x_pos),
     },
     rw monoid_with_zero_hom.map_mul φ₁,
-    rw Γ₀_map_inv φ₁ x_denom x_denom_ne_zero,
+    rw monoid_with_zero_hom.map_inv φ₁ x_denom x_denom_ne_zero,
     rw monoid_with_zero_hom.map_mul φ₂,
-    rw Γ₀_map_inv φ₂ x_denom x_denom_ne_zero,
+    rw monoid_with_zero_hom.map_inv φ₂ x_denom x_denom_ne_zero,
     rw this x_num,
     have := this (↑ x_denom),
     norm_cast at this,
@@ -175,23 +151,21 @@ lemma abs_val_equiv_of_equiv_on_primes (abv abv': ℚ → ℝ)
 begin
   have: ∀ n: ℕ, (abv n) ^ α = abv' n,
   {
-    have inductive_step: ∀ q a: ℕ, prime q → (abv a) ^ α = abv' a
+    have inductive_step: ∀ q a: ℕ, nat.prime q → (abv a) ^ α = abv' a
       → (abv (q * a: ℕ)) ^ α = abv' ((q * a): ℕ),
     {
       intros q a q_prime a_norms_eq,
       calc (abv (q * a: ℕ)) ^ α
         = abv (q*a: ℕ) ^ α
-          : by { refl }
+          : rfl
         ... = ((abv q) * (abv a)) ^ α
           : by { push_cast, rw abv_mul abv, }
         ... = (abv q) ^ α * (abv a) ^ α
-          : by { rw real.mul_rpow (abv_nonneg abv q) (abv_nonneg abv a), }
+          : by rw real.mul_rpow (abv_nonneg abv q) (abv_nonneg abv a)
         ... = (abv' q) * (abv' a)
-          : by { rw [h q q_prime, a_norms_eq], }
-        ... = abv' (q * a)
-          : by { rw ← abv_mul abv', }
+          : by rw [h q (nat.prime_iff_prime.1 q_prime), a_norms_eq]
         ... = abv' ((q * a): ℕ)
-          : by { norm_cast, },
+            : by { rw ← abv_mul abv', norm_cast, }
     },
     apply induction_on_primes,
     {
@@ -220,7 +194,7 @@ begin
     rw [abv_one abv, abv_one abv'],
     rw real.one_rpow,
   },
-  apply mul_mor_eq_of_eq_on_pnat equiv_hom abv'_hom same_on_neg_one,
+  apply ext_hom_pnat equiv_hom abv'_hom same_on_neg_one,
 
   exact this, 
 end

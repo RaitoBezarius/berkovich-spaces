@@ -85,6 +85,8 @@ begin
     from inv_nonneg.2 (le_of_lt h_n0_pow_alpha_pos),
     have h_n0_pow_alpha_pow_len_pos: 0 < ((n₀: ℝ) ^ α) ^ (base_repr.length - 1),
     from pow_pos (h_n0_pow_alpha_pos) _,
+    have h_n0_pow_neq_0: (n₀: ℝ) ^ α ≠ 0, from ne_of_gt h_n0_pow_alpha_pos,
+    have h_n0_pow_neq_1: (n₀: ℝ) ^ α ≠ 1, { rw ← h_abv_n0, exact ne_of_gt h_abv_n0_gt_one },
     have h_n0_pow_alpha_pow_len_le_n_pow_alpha: ((n₀: ℝ) ^ α) ^ (base_repr.length - 1) ≤ (n: ℝ) ^ α,
     {
       have h_n0_nonneg: 0 ≤ n₀, from le_trans zero_le_two h_n0_ge_2,
@@ -110,6 +112,8 @@ begin
           real.rpow_mul, real.rpow_nat_cast _ (base_repr.length - 1)],
       all_goals { norm_cast, exact h_n0_nonneg },
     },
+    have h_aux1: base_repr.length - 1 + 1 = base_repr.length,
+    from nat.sub_add_cancel (one_le_of_nonzero_digits_length n n₀ hn),
     exact calc (abv n: ℝ) = abv (nat.of_digits n₀ base_repr) : by rw_mod_cast [h_base_repr, nat.of_digits_digits n₀ n]
     ... = abv (list.sum (base_repr.map_with_index (λ i a, a * (n₀: ℚ) ^ i))) : fun_of_digits_eq_fun_of_sum_map_with_index abv n₀ base_repr
     ... ≤ list.sum (base_repr.map_with_index (λ i a, abv ((a: ℚ) * (n₀ : ℚ) ^ i))) : by { rw ← list.map_map_with_index, exact list.abv_sum_le_sum_abv abv _ }
@@ -118,7 +122,7 @@ begin
     ... ≤ list.sum (base_repr.map_with_index (λ (i a: ℕ), ((n₀: ℝ) ^ α) ^ i)) : sum_le_sum_abv_aux1 (le_of_lt h_n0_pow_alpha_pos) h_coeff_abv_pos
     ... = list.sum (list.map (pow ((n₀: ℝ) ^ α)) (list.range base_repr.length)) : by rw list.map_with_index_eq_range_map (λ i a, ((n₀ : ℝ) ^ α) ^ i) (λ i, ((n₀ : ℝ) ^ α) ^ i) base_repr (by simp)
     ... = geom_series ((n₀: ℝ) ^ α) (base_repr.length) : geom_sum_of_sum_of_range_map ((n₀: ℝ) ^ α) base_repr.length
-    ... = (n₀ ^ α) ^ (base_repr.length - 1) * geom_series (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : geom_sum_eq_factor_inv_geom_sum _ _
+    ... = (n₀ ^ α) ^ (base_repr.length - 1) * geom_series (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : by { rw ← h_aux1, exact geom_sum_eq_factor_inv_geom_sum (base_repr.length - 1) h_n0_pow_neq_0 h_n0_pow_neq_1}
     ... ≤ (n₀ ^ α) ^ (base_repr.length - 1) * ∑' n: ℕ, (((n₀: ℝ) ^ α)⁻¹) ^ n : (mul_le_mul_left h_n0_pow_alpha_pow_len_pos).2 $ real.finite_geom_sum_le_infinite_geom_sum_of_lt_1 (base_repr.length) h_n0_pow_alpha_inv_nonneg (by assumption)
     ... = (n₀ ^ α) ^ (base_repr.length - 1) * C : by erw tsum_geometric_of_lt_1 (inv_nonneg.2 (le_of_lt h_n0_pow_alpha_pos)) h_n0_pow_alpha_inv_lt_one
     ... ≤ n^α * C : (mul_le_mul_right C_pos).2 h_n0_pow_alpha_pow_len_le_n_pow_alpha

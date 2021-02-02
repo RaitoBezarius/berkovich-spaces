@@ -233,8 +233,12 @@ begin
     by_cases (n = 0),
     rw_mod_cast [h, real.zero_rpow, is_absolute_value.abv_zero abv, mul_zero],
     exact ne_of_gt h_exponent_pos,
-    set base_repr := n₀.digits n,
-    set s := base_repr.length,
+    set base_repr := n₀.digits n with base_repr_def,
+    set s := base_repr.length with s_def,
+    have aux0: n < n₀ ^ (s + 1),
+    {
+      sorry,
+    },
     have aux1: abv (n₀ ^ (s + 1) - n) ≤ (n₀ ^ (s + 1) - n) ^ α,
     {
       -- apply lemma 1.1
@@ -246,7 +250,16 @@ begin
     },
     have aux3: (n: ℝ) ^ α ≤ (n₀: ℝ) ^ (α * (s + 1)),
     {
-      sorry,
+      rw [mul_comm, real.rpow_mul],
+      apply real.rpow_le_rpow,
+      rotate 1,
+      rw_mod_cast real.rpow_nat_cast _ _,
+      exact le_of_lt aux0,
+      exact le_of_lt h_exponent_pos,
+      all_goals {
+        norm_cast,
+        exact zero_le _,
+      }
     },
     calc abv n = abv (n₀ ^ (s + 1) - (n₀ ^ (s + 1) - n)) : by abel
     ... ≥ abv (n₀ ^ (s + 1)) - abv (n₀ ^ (s + 1) - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _

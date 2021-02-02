@@ -6,6 +6,7 @@ import analysis.special_functions.exp_log
 import analysis.special_functions.pow
 import topology.metric_space.basic
 import topology.homeomorph
+import topology.algebra.group_with_zero
 import data.nat.prime
 import data.nat.basic
 import tactic.apply
@@ -14,7 +15,9 @@ import topology.metric_space.basic
 import ring_theory.unique_factorization_domain
 
 import abvs_equiv
+import for_mathlib.exp_log
 import ostrowski.rationals.bounded
+import ostrowski.rationals.unbounded
 
 section
 open_locale classical
@@ -78,14 +81,6 @@ lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ �
     linarith [H q h]
     end)
 
-lemma nat_abs_val_le_nat_pow_alpha (abv: ℚ → ℝ)
-  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ):
-  (abv n: ℝ) ≤ real.exp (real.log n * (real.log (abv n₀) / real.log n₀)) := sorry
-
-lemma nat_pow_alpha_le_nat_abs_val (abv: ℚ → ℝ)
-  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ):
-  real.exp (real.log n * (real.log (abv n₀) / real.log n₀)) ≤ (abv n: ℝ) := sorry
-
 def equiv_abs (α: ℝ) := λ q: ℚ, ((abs q: ℝ) ^ α)
 
 def equiv_abs_neg (α: ℝ): ∀ q: ℚ, equiv_abs α (-q) = equiv_abs α q :=
@@ -127,17 +122,40 @@ def hom_of_equiv_abs (α: ℝ) (α_ne_zero: α ≠ 0):
 
 lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
     [habv : is_absolute_value abv]
-    (exists_rat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
+    (exists_nat_unbounded : ¬ (∀ z : ℕ, abv (↑z) ≤ 1)):
     --∃ α: ℝ, abv = equiv_abs α :=
     abvs_equiv abv (λ x: ℚ, abs x) :=
     begin
-        push_neg at exists_rat_unbounded,
+        push_neg at exists_nat_unbounded,
         -- we want the smallest.
-        set n₀ := nat.find exists_rat_unbounded,
-        have n₀_spec := nat.find_spec exists_rat_unbounded,
-        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1.
+        set n₀ := nat.find exists_nat_unbounded,
+        have n₀_spec := nat.find_spec exists_nat_unbounded,
+        have n₀_smallest_spec: ∀ (a: ℕ), a < n₀ → abv a ≤ 1,
+        {
+          intros a ha,
+          exact not_lt.1 (nat.find_min exists_nat_unbounded ha),
+        },
+        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1
+        have n₀_ge_two: n₀ ≥ 2 := sorry, 
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
+        have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α,
+        {
+          rw [real.rpow_def_of_pos, h_α, ← mul_div_assoc, mul_div_cancel_left, real.exp_log],
+          apply (is_absolute_value.abv_pos abv).2,
+          apply ne_of_gt,
+          -- we throw this goal for now and we will focus on the log.
+          -- so we can provide the same proof for the two similar goals.
+          rotate 1,
+          apply real.log_ne_zero_of_ne_one,
+          rotate 1,
+          norm_cast,
+          exact ne_of_gt n₀_not_one,
+          all_goals {
+            norm_cast,
+            exact lt_trans zero_lt_one (by assumption),
+          }
+        },
         use α,
         have zero_lt_α: 0 < α,
         {
@@ -173,16 +191,17 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         -- prove abv n = n^α
         have: abv n = n ^ α :=
         begin
-          -- apply le_antisymm,
-          -- apply nat_abs_val_le_nat_pow_alpha abv n₀ n,
-          -- apply nat_pow_alpha_le_nat_abs_val abv n₀ n,
-          sorry
+          apply le_antisymm,
+          apply nat_abs_val_le_nat_pow_alpha
+           zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
+           n₀_smallest_spec,
+          sorry,
+          -- apply nat_pow_alpha_le_nat_abs_val,
         end,
         rw this,
         congr' 1,
         rw abs_eq_self.2,
-        push_cast,
-        norm_cast,
+        all_goals { norm_cast },
         exact zero_le n,
     end
 
@@ -202,8 +221,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
         },
         {
             apply or.inl,
-            sorry, -- projections are a bit annoying.
-            -- exact rat_abs_val_unbounded_real abv boundness,
+            exact rat_abs_val_unbounded_real abv boundness,
         }
     end
 end

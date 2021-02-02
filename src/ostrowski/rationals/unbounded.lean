@@ -235,20 +235,21 @@ begin
     exact ne_of_gt h_exponent_pos,
     set base_repr := n₀.digits n with base_repr_def,
     set s := base_repr.length with s_def,
-    have aux0: n < n₀ ^ (s + 1),
+    have aux0: n < n₀ ^ s,
     {
-      sorry,
+      rw [s_def, base_repr_def],
+      exact nat.lt_base_pow_length_digits h_n0_ge_2,
     },
-    have aux1: abv (n₀ ^ (s + 1) - n) ≤ (n₀ ^ (s + 1) - n) ^ α,
+    have aux1: abv (n₀ ^ s - n) ≤ (n₀ ^ s - n) ^ α,
     {
       -- apply lemma 1.1
       sorry,
     },
-    have aux2: ((n₀: ℝ) ^ (s + 1) - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * (s + 1)) * (1 - (n₀: ℝ)⁻¹) ^ α,
+    have aux2: ((n₀: ℝ) ^ s - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * (s)) * (1 - (n₀: ℝ)⁻¹) ^ α,
     {
       sorry,
     },
-    have aux3: (n: ℝ) ^ α ≤ (n₀: ℝ) ^ (α * (s + 1)),
+    have aux3: (n: ℝ) ^ α ≤ (n₀: ℝ) ^ (α * s),
     {
       rw [mul_comm, real.rpow_mul],
       apply real.rpow_le_rpow,
@@ -261,14 +262,14 @@ begin
         exact zero_le _,
       }
     },
-    calc abv n = abv (n₀ ^ (s + 1) - (n₀ ^ (s + 1) - n)) : by abel
-    ... ≥ abv (n₀ ^ (s + 1)) - abv (n₀ ^ (s + 1) - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _
-    ... = (abv n₀) ^ (s + 1) - abv (n₀ ^ (s + 1) - n) : by rw is_absolute_value.abv_pow abv _ _
-    ... ≥ (abv n₀) ^ (s + 1) - (n₀ ^ (s + 1) - n) ^ α : sorry
-    ... = (n₀ ^ α) ^ (s + 1) - (n₀ ^ (s + 1) - n) ^ α : by rw h_abv_n0
-    ... = n₀ ^ (α * (s + 1)) - (n₀ ^ (s + 1) - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
-    ... ≥ n₀ ^ (α * (s + 1)) - (n₀ ^ (s + 1) - n₀ ^ α) ^ α : sorry
-    ... = C * n₀ ^ (α * (s + 1)) : sorry
+    calc abv n = abv (n₀ ^ s - (n₀ ^ s - n)) : by abel
+    ... ≥ abv (n₀ ^ s) - abv (n₀ ^ s - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _
+    ... = (abv n₀) ^ s - abv (n₀ ^ s - n) : by rw is_absolute_value.abv_pow abv _ _
+    ... ≥ (abv n₀) ^ s - (n₀ ^ s - n) ^ α : sorry
+    ... = (n₀ ^ α) ^ s - (n₀ ^ s - n) ^ α : by rw h_abv_n0
+    ... = n₀ ^ (α * s) - (n₀ ^ s - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
+    ... ≥ n₀ ^ (α * s) - (n₀ ^ s - n₀ ^ α) ^ α : sorry
+    ... = C * n₀ ^ (α * s) : sorry
     ... ≥ C * n ^ α : (mul_le_mul_left C_pos).2 aux3,
   }
 end

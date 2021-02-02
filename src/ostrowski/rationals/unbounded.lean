@@ -218,10 +218,17 @@ lemma exists_nonneg_const_pow_alpha_le_abs_nat
   (h_smallest: ∀ (a: ℕ), a < n₀ → abv a ≤ 1):
   ∃ (C: ℝ) (C_pos: C > 0), ∀ (n: ℕ), C * n^α ≤ abv n :=
 begin
-  set C := (1 - (1 - (n₀: ℝ)⁻¹) ^ α),
+  set C := (1 - (1 - (n₀: ℝ)⁻¹) ^ α) with C_def,
   have C_pos: C > 0,
   {
-    sorry,
+    simp [C_def],
+    apply real.rpow_lt_one,
+    rw sub_nonneg,
+    apply inv_le_one,
+    norm_cast,
+    rotate 1,
+    simp only [sub_lt_self_iff, nat.cast_pos, inv_pos],
+    any_goals { linarith },
   },
   use C,
   split,

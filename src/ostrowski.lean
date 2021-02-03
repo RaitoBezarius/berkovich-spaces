@@ -12,9 +12,11 @@ import data.nat.basic
 import tactic.apply
 import tactic.linarith
 import topology.metric_space.basic
+import ring_theory.unique_factorization_domain
 
 import abvs_equiv
 import for_mathlib.exp_log
+import ostrowski.rationals.bounded
 import ostrowski.rationals.unbounded
 
 section
@@ -34,119 +36,6 @@ def metric_space_of_real_abv (abv: α → ℝ) [is_absolute_value abv] : metric_
     rw show x - z = (x - y) + (y - z), by abel,
     apply abv_add,
   end}
-
--- prouver que la valeur absolue triviale est une valeur absolue
-def trivial_abs : ℚ → ℝ := λ a,
-    if a = 0 then 0
-    else 1
-
-instance : is_absolute_value trivial_abs :=
-{ abv_nonneg := λ x, begin rw [trivial_abs], dsimp, split_ifs, exact le_refl 0, exact zero_le_one, end,
-  abv_eq_zero := λ x, begin rw [trivial_abs], dsimp, split, contrapose!, intro, rw if_neg ᾰ, norm_num, intro, rw if_pos ᾰ, end,
-  abv_add := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals { linarith,}, exfalso, rw [h_1,h_2] at h, simpa using h, end,
-  abv_mul := λ x y, begin rw [trivial_abs], dsimp, split_ifs, any_goals {norm_num}, finish, finish, finish, finish, end }
-
-lemma trivial_abs_is_one_iff_nonzero_arg (a: ℚ) : (a ≠ 0) ↔ (trivial_abs a = 1) :=
-begin
-    split,
-    intro h₁,
-    unfold trivial_abs,
-    by_cases (a = 0),
-    exfalso,
-    exact h₁ h,
-    rw if_neg h,
-    contrapose!,
-    intro h,
-    unfold trivial_abs,
-    rw if_pos h,
-    finish
-end
-
-lemma rat_mk_eq_div (x_num : ℤ) (x_denom : ℕ) (x_pos : 0 < x_denom) (x_cop : nat.coprime (int.nat_abs x_num) x_denom)
-: ({num := x_num, denom := x_denom, pos := x_pos, cop := x_cop}:ℚ) = (↑ x_num)/(↑ x_denom) := begin
-norm_cast,
-rw rat.mk,
-rw rat.mk_nat,
-rw dif_neg,
-rw rat.mk_pnat,
-{
-  simp [x_cop.gcd_eq_one],
-},
-exact ne_of_gt x_pos,
-end
-
-def hom_of_abv {α} [linear_ordered_field α] {β} [ring β]
-  (abv: β → α) [is_absolute_value abv]:
-  monoid_with_zero_hom β α := {
-    to_fun := abv,
-    map_zero' := sorry,
-    map_one' := sorry,
-    map_mul' := sorry,
- }
-
--- Deserves its place in matlib, as `monoid_with_zero_hom.map_inv`
-theorem Γ₀_map_inv {G₁ G₂: Type} [group_with_zero G₁] [group_with_zero G₂]
-  (φ: monoid_with_zero_hom G₁ G₂) (a: G₁) (a_ne_zero: a ≠ 0): φ a⁻¹ = (φ a)⁻¹ :=
-begin
-  apply eq_inv_of_mul_left_eq_one,
-  rw ← monoid_with_zero_hom.map_mul,
-  rw inv_mul_cancel a_ne_zero,
-  rw monoid_with_zero_hom.map_one,
-end
-
--- Integer values of a morphism `φ` and its value on `-1` completely determines `φ`
-theorem mul_mor_eq_of_eq_on_pnat (φ₁ φ₂: monoid_with_zero_hom ℚ ℝ)
-  (same_on_neg_one: φ₁ (-1) = φ₂ (-1)) (same_on_nat: ∀ n: ℕ, φ₁ n = φ₂ n): (φ₁: ℚ → ℝ) = φ₂ :=
-begin
-  ext,
-  suffices : ∀ z : ℤ, φ₁ z = φ₂ z,
-  begin
-    induction x,
-    rw rat_mk_eq_div,
-    repeat { rw div_eq_mul_inv, },
-    have x_denom_ne_zero: (x_denom: ℚ) ≠ 0,
-    {
-      symmetry,
-      norm_cast,
-      exact (ne_of_lt x_pos),
-    },
-    rw monoid_with_zero_hom.map_mul φ₁,
-    rw Γ₀_map_inv φ₁ x_denom x_denom_ne_zero,
-    rw monoid_with_zero_hom.map_mul φ₂,
-    rw Γ₀_map_inv φ₂ x_denom x_denom_ne_zero,
-    rw this x_num,
-    have := this (↑ x_denom),
-    norm_cast at this,
-    rw this,
-  end,
-  intro x,
-  suffices : ∀ z : ℕ, φ₁ z = φ₂ z,
-  begin
-    induction x,
-    simp [this],
-    push_cast,
-    conv {
-      congr,
-      rw neg_eq_neg_one_mul,
-      skip,
-      rw neg_eq_neg_one_mul,
-      skip,
-    },
-    rw monoid_with_zero_hom.map_mul φ₁,
-    rw monoid_with_zero_hom.map_mul φ₂,
-    rw same_on_neg_one,
-    simp,
-    norm_cast,
-    exact this _,
-  end,
-  intro x,
-  cases x,
-  simp,
-  have := same_on_nat (nat.succ x_1),
-  simp [-add_comm] at this,
-  simp [-add_comm],
-  rw this,
-end
 
 -- rational metric space equipped of an absolute value
 def metric_rat_with_abv (abv: ℚ → ℝ) [is_absolute_value abv]: metric_space ℚ := metric_space_of_real_abv abv
@@ -192,18 +81,6 @@ lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ �
     linarith [H q h]
     end)
 
-def is_padic_norm 
-  (p: ℕ) [fact p.prime]
-  (abv: ℚ → ℝ) [is_absolute_value abv] :=
-    (λ r: ℚ, (padic_norm p r: ℝ)) = abv
-
-lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
-      (hnontriv: abv ≠ trivial_abs)
-      (all_nat_le_one: (∀ z : ℕ, abv z ≤ 1)):
-      ∃ (p) [hp: nat.prime p],
-      @is_padic_norm p hp abv _ := sorry
-
--- all_nat_le_one become all_int_le_one
 def equiv_abs (α: ℝ) := λ q: ℚ, ((abs q: ℝ) ^ α)
 
 def equiv_abs_neg (α: ℝ): ∀ q: ℚ, equiv_abs α (-q) = equiv_abs α q :=
@@ -335,7 +212,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
     (abvs_equiv abv (λ x: ℚ, abs x))
     ∨
     (∃ (p) [hp: nat.prime p],
-        @is_padic_norm p hp abv _) :=
+        @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp)) :=
     begin
         by_cases boundness : ∀ z : ℕ, abv z ≤ 1,
         {

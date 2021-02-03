@@ -257,7 +257,7 @@ begin
          simp [nat.cast_sub (le_of_lt aux0)],
        },
     },
-    have aux2: ((n₀: ℝ) ^ s - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * s) * (1 - (n₀: ℝ)⁻¹) ^ α,
+    have aux2: ((n₀: ℝ) ^ s - (n₀: ℝ) ^ (s - 1)) ^ α = (n₀: ℝ) ^ (α * s) * (1 - (n₀: ℝ)⁻¹) ^ α,
     {
       sorry,
     },
@@ -274,14 +274,23 @@ begin
         exact zero_le _,
       }
     },
+    have aux4: ((n₀: ℝ) ^ s - (n: ℝ)) ^ α ≤ ((n₀: ℝ) ^ s - (n₀: ℝ) ^ (s - 1)) ^ α,
+    {
+      apply real.rpow_le_rpow,
+      sorry,
+      apply sub_le_sub_left,
+      sorry,
+      sorry,
+    },
     calc abv n = abv (n₀ ^ s - (n₀ ^ s - n)) : by abel
     ... ≥ abv (n₀ ^ s) - abv (n₀ ^ s - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _
     ... = (abv n₀) ^ s - abv (n₀ ^ s - n) : by rw is_absolute_value.abv_pow abv _ _
     ... ≥ (abv n₀) ^ s - (n₀ ^ s - n) ^ α : sub_le_sub_left aux1 _
     ... = (n₀ ^ α) ^ s - (n₀ ^ s - n) ^ α : by rw h_abv_n0
     ... = n₀ ^ (α * s) - (n₀ ^ s - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
-    ... ≥ n₀ ^ (α * s) - (n₀ ^ s - n₀ ^ α) ^ α : sorry
-    ... = C * n₀ ^ (α * s) : sorry
+    ... ≥ n₀ ^ (α * s) - (n₀ ^ s - n₀ ^ (s - 1)) ^ α : sub_le_sub_left aux4 _
+    ... = n₀ ^ (α * s) - n₀ ^ (α * s) * (1 - n₀⁻¹) ^ α : by rw aux2
+    ... = C * n₀ ^ (α * s) : by rw [mul_comm C _, C_def, mul_sub_left_distrib, mul_one]
     ... ≥ C * n ^ α : (mul_le_mul_left C_pos).2 aux3,
   }
 end

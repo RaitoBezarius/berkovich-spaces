@@ -289,8 +289,7 @@ begin
     ... = (n₀ ^ α) ^ s - (n₀ ^ s - n) ^ α : by rw h_abv_n0
     ... = n₀ ^ (α * s) - (n₀ ^ s - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
     ... ≥ n₀ ^ (α * s) - (n₀ ^ s - n₀ ^ (s - 1)) ^ α : sub_le_sub_left aux4 _
-    ... = n₀ ^ (α * s) - n₀ ^ (α * s) * (1 - n₀⁻¹) ^ α : by rw aux2
-    ... = C * n₀ ^ (α * s) : by rw [mul_comm C _, C_def, mul_sub_left_distrib, mul_one]
+    ... = C * n₀ ^ (α * s) : by rw [mul_comm C _, C_def, mul_sub_left_distrib, mul_one, aux2]
     ... ≥ C * n ^ α : (mul_le_mul_left C_pos).2 aux3,
   }
 end

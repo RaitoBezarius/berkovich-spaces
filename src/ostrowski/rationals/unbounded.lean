@@ -249,10 +249,15 @@ begin
     },
     have aux1: abv (n₀ ^ s - n) ≤ (n₀ ^ s - n) ^ α,
     {
-      -- apply lemma 1.1
-      sorry,
+      convert @nat_abs_val_le_nat_pow_alpha
+       _ _ _ (n₀ ^ s - n) _
+       h_exponent_pos h_n0_ge_2 h_abv_n0
+       h_abv_n0_gt_one h_smallest,
+       all_goals {
+         simp [nat.cast_sub (le_of_lt aux0)],
+       },
     },
-    have aux2: ((n₀: ℝ) ^ s - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * (s)) * (1 - (n₀: ℝ)⁻¹) ^ α,
+    have aux2: ((n₀: ℝ) ^ s - (n₀: ℝ) ^ α) ^ α = (n₀: ℝ) ^ (α * s) * (1 - (n₀: ℝ)⁻¹) ^ α,
     {
       sorry,
     },
@@ -272,7 +277,7 @@ begin
     calc abv n = abv (n₀ ^ s - (n₀ ^ s - n)) : by abel
     ... ≥ abv (n₀ ^ s) - abv (n₀ ^ s - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _
     ... = (abv n₀) ^ s - abv (n₀ ^ s - n) : by rw is_absolute_value.abv_pow abv _ _
-    ... ≥ (abv n₀) ^ s - (n₀ ^ s - n) ^ α : sorry
+    ... ≥ (abv n₀) ^ s - (n₀ ^ s - n) ^ α : sub_le_sub_left aux1 _
     ... = (n₀ ^ α) ^ s - (n₀ ^ s - n) ^ α : by rw h_abv_n0
     ... = n₀ ^ (α * s) - (n₀ ^ s - n) ^ α : by { rw_mod_cast [real.rpow_mul _ _ _, real.rpow_nat_cast _ _], exact zero_le _ }
     ... ≥ n₀ ^ (α * s) - (n₀ ^ s - n₀ ^ α) ^ α : sorry

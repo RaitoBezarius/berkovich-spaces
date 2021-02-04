@@ -293,10 +293,19 @@ begin
     have aux4: ((n₀: ℝ) ^ s - (n: ℝ)) ^ α ≤ ((n₀: ℝ) ^ s - (n₀: ℝ) ^ (s - 1)) ^ α,
     {
       apply real.rpow_le_rpow,
-      sorry,
+      rw sub_nonneg,
+      any_goals { norm_cast },
+      exact le_of_lt (nat.lt_base_pow_length_digits h_n0_ge_2),
+      rotate 1,
+      exact le_of_lt h_exponent_pos,
       apply sub_le_sub_left,
-      sorry,
-      sorry,
+      have: 0 < (n₀: ℝ) := by exact_mod_cast lt_of_lt_of_le zero_lt_two h_n0_ge_2,
+      apply (mul_le_mul_left this).1,
+      norm_cast,
+      rw ← pow_succ,
+      convert nat.base_pow_length_digits_le n₀ n h_n0_ge_2 h,
+      rw [← base_repr_def, ← s_def, nat.sub_add_cancel],
+      exact one_le_of_nonzero_digits_length n n₀ h,
     },
     calc abv n = abv (n₀ ^ s - (n₀ ^ s - n)) : by abel
     ... ≥ abv (n₀ ^ s) - abv (n₀ ^ s - n) : is_absolute_value.sub_abv_le_abv_sub abv _ _

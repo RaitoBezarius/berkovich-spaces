@@ -16,6 +16,7 @@ import ring_theory.unique_factorization_domain
 
 import abvs_equiv
 import for_mathlib.exp_log
+import for_mathlib.nat_find
 import ostrowski.rationals.bounded
 import ostrowski.rationals.unbounded
 
@@ -184,7 +185,7 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         unfold equiv_abs at equiv_abs_eq_hom_fn,
         rw [abv_eq_hom_fn, equiv_abs_eq_hom_fn],
         symmetry,
-        apply mul_mor_eq_of_eq_on_pnat _ _ same_on_neg_one,
+        apply ext_hom_pnat _ _ same_on_neg_one,
         intro n,
         rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
         unfold equiv_abs,
@@ -195,8 +196,9 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           apply nat_abs_val_le_nat_pow_alpha
            zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
            n₀_smallest_spec,
-          sorry,
-          -- apply nat_pow_alpha_le_nat_abs_val,
+          apply nat_pow_alpha_le_nat_abs_val
+           zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
+           n₀_smallest_spec,
         end,
         rw this,
         congr' 1,

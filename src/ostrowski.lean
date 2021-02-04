@@ -151,7 +151,7 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           rw_mod_cast is_absolute_value.abv_one abv,
         },
         have n₀_not_one: n₀ > 1 := (nat.lt_find_iff exists_nat_unbounded 1).2 aux0, -- necessarily, n₀ > 1
-        have n₀_ge_two: n₀ ≥ 2 := sorry, 
+        have n₀_ge_two: n₀ ≥ 2 := by linarith,
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
         have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α,

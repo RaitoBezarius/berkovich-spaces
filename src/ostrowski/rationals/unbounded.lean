@@ -16,6 +16,35 @@ begin
   rw one_mul,
 end
 
+lemma technical_aux1 {C: ℝ} {N: ℕ} {n: ℕ} {α: ℝ}
+(C_pos: C > 0) (N_pos: N ≠ 0) (n_pow_pos: 0 < (n: ℝ) ^ α)
+(C_pow_pos: 0 < C ^ ((N: ℝ)⁻¹)):
+(C ^ ((N: ℝ)⁻¹) * (n: ℝ) ^ α) ^ (N: ℝ) = C * ((n ^ N): ℝ) ^ α :=
+begin
+    rw real.mul_rpow,
+    congr' 1,
+    -- (C^(1/N))^N = C
+    {
+      -- FIXME(Ryan): investigate why cannot use real.rpow_nat_inv_pow_nat properly?
+      rw [← real.rpow_mul, inv_mul_cancel, real.rpow_one],
+      exact_mod_cast N_pos,
+      exact le_of_lt C_pos,
+    },
+    -- (n^α)^N = (n^N)^α
+    {
+      rw ← real.rpow_mul,
+      rw mul_comm α (↑N),
+      rw real.rpow_mul,
+      simp only [real.rpow_nat_cast, nat.cast_pow],
+      all_goals {
+        norm_cast,
+        exact nat.zero_le n,
+      },
+    },
+    { exact le_of_lt C_pow_pos },
+    { exact le_of_lt n_pow_pos },
+end
+
 
 lemma sum_le_sum_abv_aux1 {b: ℝ} {l: list ℕ} {abv: ℚ → ℝ}
 [is_absolute_value abv]
@@ -176,28 +205,11 @@ begin
         },
         -- (C^(1/N)n^α)^N = C(n^N)^α
         {
-          rw real.mul_rpow,
-          congr' 1,
-          -- (C^(1/N))^N = C
-          {
-            -- FIXME(Ryan): investigate why cannot use real.rpow_nat_inv_pow_nat properly?
-            rw [← real.rpow_mul, inv_mul_cancel, real.rpow_one],
-            linarith,
-            exact le_of_lt C_pos,
-          },
-          -- (n^α)^N = (n^N)^α
-          {
-            rw ← real.rpow_mul,
-            rw mul_comm α (↑N),
-            rw real.rpow_mul,
-            simp only [real.rpow_nat_cast, nat.cast_pow],
-            all_goals {
-              norm_cast,
-              exact nat.zero_le n,
-            },
-          },
-          exact le_of_lt C_pow_pos,
-          exact le_of_lt n_pow_alpha_pos,
+          exact_mod_cast technical_aux1
+          C_pos
+          (by exact_mod_cast ne_of_gt N_pos)
+          n_pow_alpha_pos
+          (by exact_mod_cast C_pow_pos),
         },
       },
       apply habv.abv_nonneg,
@@ -337,6 +349,43 @@ begin
       h_exponent_pos h_n0_ge_2 h_abv_n0 h_abv_n0_gt_one h_smallest,
   refine le_of_tendsto (tendsto_aux1 n α C_pos) _,
   {
-    sorry,
+    simp only [filter.eventually_at_top, one_div, ge_iff_le],
+    use 1,
+    intros N N_pos,
+    by_cases hn: n = 0,
+    rw_mod_cast [hn, 
+      is_absolute_value.abv_zero abv,
+      real.zero_rpow (ne_of_gt h_exponent_pos), mul_zero],
+    have C_pow_pos: 0 < C^((N: ℝ)⁻¹), from real.rpow_pos_of_pos C_pos _,
+    have n_pow_alpha_pos: 0 < (n: ℝ)^α, from real.rpow_pos_of_pos (by exact_mod_cast nat.pos_of_ne_zero hn) _,
+    have N_pos: 0 < (N: ℝ), by norm_cast; exact lt_of_lt_of_le zero_lt_one N_pos,
+    apply (real.rpow_le_rpow_iff _ _ N_pos).1,
+    -- |n|^N ≤ (C^(1/N)*n^α)^N
+    {
+      convert abv_pos (n ^ N),
+      {
+        -- (C^(1/N)n^α)^N = C(n^N)^α
+        exact_mod_cast
+        technical_aux1
+        C_pos
+        (by exact_mod_cast ne_of_gt N_pos)
+        n_pow_alpha_pos
+        (by exact_mod_cast C_pow_pos),
+      },
+      -- |n|^N = |n^N|
+      {
+        simp,
+        symmetry,
+        exact is_absolute_value.abv_pow abv n N,
+      },
+    },
+    {
+      -- C > 0 → C^(1/N) > 0 as N > 0
+      -- n > 0 → n^α > 0 as α > 0
+      -- therefore C^(1/N) * n^α > 0
+      apply (zero_le_mul_left (gt_iff_lt.1 C_pow_pos)).2,
+      exact le_of_lt (gt_iff_lt.1 n_pow_alpha_pos),
+    },
+    { exact is_absolute_value.abv_nonneg abv _ },
   },
 end

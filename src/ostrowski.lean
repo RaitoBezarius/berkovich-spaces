@@ -16,6 +16,7 @@ import ring_theory.unique_factorization_domain
 
 import abvs_equiv
 import for_mathlib.exp_log
+import for_mathlib.nat_find
 import ostrowski.rationals.bounded
 import ostrowski.rationals.unbounded
 
@@ -135,8 +136,22 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           intros a ha,
           exact not_lt.1 (nat.find_min exists_nat_unbounded ha),
         },
-        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1
-        have n₀_ge_two: n₀ ≥ 2 := sorry, 
+        have aux0: ∀ (m: ℕ) (h: m ≤ 1), ¬ (1 < abv m),
+        {
+          intros m h,
+          push_neg,
+          have: m = 0 ∨ m = 1 := by dec_trivial!,
+          apply or.elim this,
+          intro h_zero,
+          rw h_zero,
+          rw_mod_cast is_absolute_value.abv_zero abv,
+          exact zero_le_one,
+          intro h_one,
+          rw h_one,
+          rw_mod_cast is_absolute_value.abv_one abv,
+        },
+        have n₀_not_one: n₀ > 1 := (nat.lt_find_iff exists_nat_unbounded 1).2 aux0, -- necessarily, n₀ > 1
+        have n₀_ge_two: n₀ ≥ 2 := by linarith,
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,
         have h_n0_pow_α_eq_abv_n0: abv n₀ = n₀^α,
@@ -184,7 +199,7 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
         unfold equiv_abs at equiv_abs_eq_hom_fn,
         rw [abv_eq_hom_fn, equiv_abs_eq_hom_fn],
         symmetry,
-        apply mul_mor_eq_of_eq_on_pnat _ _ same_on_neg_one,
+        apply ext_hom_pnat _ _ same_on_neg_one,
         intro n,
         rw [← abv_eq_hom_fn, ← equiv_abs_eq_hom_fn],
         unfold equiv_abs,
@@ -195,8 +210,9 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           apply nat_abs_val_le_nat_pow_alpha
            zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
            n₀_smallest_spec,
-          sorry,
-          -- apply nat_pow_alpha_le_nat_abs_val,
+          apply nat_pow_alpha_le_nat_abs_val
+           zero_lt_α n₀_ge_two h_n0_pow_α_eq_abv_n0 n₀_spec
+           n₀_smallest_spec,
         end,
         rw this,
         congr' 1,

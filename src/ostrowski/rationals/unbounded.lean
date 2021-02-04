@@ -7,6 +7,16 @@ import for_mathlib.geom_sum
 import for_mathlib.valuations
 import for_mathlib.specific_limits
 
+lemma tendsto_aux1 (n: ℕ) (α: ℝ) {C: ℝ} (C_pos: C > 0):
+  filter.tendsto
+  (λ (N : ℕ), C ^ ((1: ℝ) / N) * ↑n ^ α)
+  filter.at_top (nhds (↑n ^ α)) :=
+begin
+  convert tendsto.mul_const ((n: ℝ)^α) (tendsto_root_at_top_nhds_1_of_pos C_pos),
+  rw one_mul,
+end
+
+
 lemma sum_le_sum_abv_aux1 {b: ℝ} {l: list ℕ} {abv: ℚ → ℝ}
 [is_absolute_value abv]
 (hb_nonneg: 0 ≤ b)
@@ -199,18 +209,12 @@ begin
         exact le_of_lt (gt_iff_lt.1 n_pow_alpha_pos),
       }
     },
-    have h_convergence: filter.tendsto (λ (N : ℕ), C ^ ((1: ℝ) / N) * ↑n ^ α) filter.at_top (nhds (↑n ^ α)),
-    {
-      convert tendsto.mul_const ((n: ℝ)^α) (tendsto_root_at_top_nhds_1_of_pos C_pos),
-      rw one_mul,
-    },
-    -- eventually version is required here but I need to learn about it first :>.
-    exact ge_of_tendsto h_convergence h_nthroot,
+    exact ge_of_tendsto (tendsto_aux1 n α C_pos) h_nthroot,
 end
 
 lemma exists_nonneg_const_pow_alpha_le_abs_nat
-  (abv: ℚ → ℝ) [habv: is_absolute_value abv]
-  (n₀: ℕ) (α: ℝ) 
+  {abv: ℚ → ℝ} [habv: is_absolute_value abv]
+  {n₀: ℕ} {α: ℝ}
   (h_exponent_pos: 0 < α)
   (h_n0_ge_2: n₀ ≥ 2)
   (h_abv_n0: abv n₀ = (n₀: ℝ) ^ α)
@@ -319,9 +323,20 @@ begin
   }
 end
 
-lemma nat_pow_alpha_le_nat_abs_val (abv: ℚ → ℝ)
-  [habv: is_absolute_value abv] (n₀: ℕ) (n: ℕ) (α: ℝ):
+lemma nat_pow_alpha_le_nat_abs_val {abv: ℚ → ℝ}
+  [habv: is_absolute_value abv] {n₀: ℕ} {n: ℕ} {α: ℝ}
+  (h_exponent_pos: 0 < α)
+  (h_n0_ge_2: n₀ ≥ 2)
+  (h_abv_n0: abv n₀ = (n₀: ℝ) ^ α)
+  (h_abv_n0_gt_one: abv n₀ > 1)
+  (h_smallest: ∀ (a: ℕ), a < n₀ → abv a ≤ 1):
   (n: ℝ)^α ≤ (abv n: ℝ) :=
 begin
-  sorry,
+  obtain ⟨ C, ⟨ C_pos, abv_pos ⟩ ⟩ :=
+      exists_nonneg_const_pow_alpha_le_abs_nat
+      h_exponent_pos h_n0_ge_2 h_abv_n0 h_abv_n0_gt_one h_smallest,
+  refine le_of_tendsto (tendsto_aux1 n α C_pos) _,
+  {
+    sorry,
+  },
 end

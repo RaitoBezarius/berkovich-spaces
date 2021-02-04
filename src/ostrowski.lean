@@ -136,7 +136,21 @@ lemma rat_abs_val_unbounded_real (abv: ℚ → ℝ)
           intros a ha,
           exact not_lt.1 (nat.find_min exists_nat_unbounded ha),
         },
-        have n₀_not_one: n₀ > 1 := sorry, -- necessarily, n₀ > 1
+        have aux0: ∀ (m: ℕ) (h: m ≤ 1), ¬ (1 < abv m),
+        {
+          intros m h,
+          push_neg,
+          have: m = 0 ∨ m = 1 := by dec_trivial!,
+          apply or.elim this,
+          intro h_zero,
+          rw h_zero,
+          rw_mod_cast is_absolute_value.abv_zero abv,
+          exact zero_le_one,
+          intro h_one,
+          rw h_one,
+          rw_mod_cast is_absolute_value.abv_one abv,
+        },
+        have n₀_not_one: n₀ > 1 := (nat.lt_find_iff exists_nat_unbounded 1).2 aux0, -- necessarily, n₀ > 1
         have n₀_ge_two: n₀ ≥ 2 := sorry, 
         apply abvs_equiv_symmetric,
         set α := real.log (abv n₀) / real.log n₀ with h_α,

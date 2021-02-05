@@ -1,0 +1,5 @@
+*.blg
+*.bbl
+*.dvi
+*.out.ps
+*.run.xml

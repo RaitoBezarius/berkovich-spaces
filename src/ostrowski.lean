@@ -20,6 +20,8 @@ import for_mathlib.nat_find
 import ostrowski.rationals.bounded
 import ostrowski.rationals.unbounded
 
+import for_mathlib.rat
+
 section
 open_locale classical
 open list option is_absolute_value
@@ -65,22 +67,6 @@ def metric_space_eq {α: Type*} (d d' : metric_space α) : Prop :=
 -- sinon on se ramène à démontrer déjà d'une part que trivial_abs q = 1 (trivial)
 -- et du coup ça revient à démontrer que sous hypothèse de double inégalité, on a abv q = 1
 -- ce qui est immédiat par antisymétrie.
-
--- TODO: what about n : N ?
-lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ → ℝ) [is_absolute_value abv]
-    : ((∃ q : ℚ, (abv q) ≠ (trivial_abs q)) →  (∃ n : ℚ, (n ≠ 0) ∧ (abv(n) < 1 ∨ abv(n) > 1))) :=
-    (begin
-    contrapose!,
-    intros H q,
-    by_cases (q = 0),
-    rw h,
-    rw [is_absolute_value.abv_zero abv, is_absolute_value.abv_zero trivial_abs],
-    have c : trivial_abs q = 1,
-    apply (trivial_abs_is_one_iff_nonzero_arg q).1,
-    exact h,
-    rw c,
-    linarith [H q h]
-    end)
 
 def equiv_abs (α: ℝ) := λ q: ℚ, ((abs q: ℝ) ^ α)
 
@@ -227,8 +213,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
     (hnontriv: abv ≠ trivial_abs):
     (abvs_equiv abv (λ x: ℚ, abs x))
     ∨
-    (∃ (p) [hp: nat.prime p],
-        @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp)) :=
+    ∃ (p) [p_prime: nat.prime p], abvs_equiv abv (rat_padic_abv p p_prime) :=
     begin
         by_cases boundness : ∀ z : ℕ, abv z ≤ 1,
         {

@@ -22,12 +22,32 @@ noncomputable theory
 lemma padic_norm_q (p: ℕ) (q: ℤ) (p_prime: prime p) (q_prime: prime q):
   padic_norm p q = if associated q p then 1/p else 1 :=
 begin
+  haveI: fact (nat.prime p) := nat.prime_iff_prime.2 p_prime,
   exact if h: associated q p
     then by {
+      rw show padic_norm p q = padic_norm p p,
+      by {
+        rcases h.symm with ⟨ u, rfl ⟩,
+        push_cast,
+        rw abv_mul (padic_norm p),
+        rw show padic_norm p (u: ℤ) = 1,
+        by { cases units_int.values u with h h; simp [h], },
+        rw mul_one,
+      },
       simp [h, @padic_norm.padic_norm_p_of_prime p (nat.prime_iff_prime.2 p_prime)],
-      sorry
     }
-    else by sorry,
+    else by {
+      unfold padic_norm,
+      unfold padic_val_rat,
+      have: multiplicity (p: ℤ) q = 0,
+      {
+        have p_int_prime: prime (p: ℤ) := nat.prime_iff_prime_int.1
+          (nat.prime_iff_prime.2 p_prime),
+        simp [h, multiplicity.multiplicity_eq_zero_of_not_dvd
+          (λ h', h (primes_associated_of_dvd p_int_prime q_prime h').symm)],
+      },
+      simp [h, p_prime.1, q_prime.1, p_prime.ne_one, this],
+    },
 end
 
 def rat_padic_abv (p: ℕ) (p_prime: nat.prime p): ℚ → ℝ := λ x: ℚ, (padic_norm p x: ℝ)
@@ -157,13 +177,8 @@ begin
       rw [← φ₁_f, ← φ₂_f],
       dsimp,
       intro u,
-      have p₁ := fintype.complete u,
-      cases p₁,
-      rw p₁, simp [abv_one (sample_padic_abv p p_prime)],
-      cases p₁,
-      rw p₁, simp [abv_neg (sample_padic_abv p p_prime),
-        abv_one (sample_padic_abv p p_prime)],
-      exfalso, exact list.not_mem_nil u p₁,
+      cases units_int.values u with h h;
+      simp [h, abv_neg (sample_padic_abv p p_prime), abv_one (sample_padic_abv p p_prime)],
     },
     {
       intros q hq,

@@ -103,14 +103,18 @@ begin
   {
     intros a b hab,
     apply le_antisymm,
-    calc abv (a + b) ≤ max (abv a) (abv b) : by sorry
+    calc abv (a + b) ≤ max (abv a) (abv b) : nonarchimedian _ _
       ... = abv b : max_eq_right (le_of_lt hab),
-    have: abv b ≤ abv (a + b),
-    calc abv b = abv (-a + (a + b)) : by ring
-      ... ≤ max (abv (-a)) (abv (a + b)) : by sorry
-      ... = max (abv a) (abv (a + b)) : by rw abv_neg abv
-      ... = abv (a + b) : by sorry,
-    exact this,
+    have h₀: abv b ≤ max (abv a) (abv (a + b)),
+    {
+      calc abv b = abv (-a + (a + b)) : by ring
+        ... ≤ max (abv (-a)) (abv (a + b)) : nonarchimedian _ _
+        ... = max (abv a) (abv (a + b)) : by rw abv_neg abv
+    },
+    have h₁: max (abv a) (abv (a + b)) = abv (a + b) :=
+      (max_choice (abv a) (abv (a + b)))
+      .resolve_left (ne_of_lt (lt_of_lt_of_le hab h₀)).symm,
+    rwa h₁ at h₀,
   },
 
   suffices: abvs_equiv abv (degree_norm (abv polynomial.X) one_lt_abvx),

@@ -156,14 +156,62 @@ begin
   use [1, zero_lt_one],
   simp [degree_norm],
   ext p,
-  by_cases hp: p = 0,
-  simp [hp, abv_zero abv],
-  have: abv p = (abv polynomial.X) ^ p.nat_degree,
+  refine p.rec_on_horner _ _ _,
   {
-    -- use polynomial.as_sum_range ?
-    sorry
+    simp [abv_zero abv],
   },
-  simp [this, hp],
+  { 
+    intros q c hq_coeff hc_ne_zero hq_eq_abv,
+    by_cases hq_zero: q = 0,
+    {
+      simp [hq_zero, trivial_on_base c hc_ne_zero, if_neg hc_ne_zero],
+    },
+    have zero_lt_deg_q: 0 < q.degree,
+    {
+      -- TODO: avoid naturals and just use with_bot ℕ, it's simpler.
+      apply polynomial.nat_degree_pos_iff_degree_pos.1,
+      apply nat.succ_le_of_lt,
+      apply nat.lt_of_le_and_ne,
+      exact polynomial.zero_le_nat_degree hq_zero,
+      by_contra, push_neg at h,
+      rw [polynomial.eq_C_of_nat_degree_eq_zero h.symm, hq_coeff] at hq_zero,
+      simp at hq_zero,
+      exact hq_zero,
+    },
+    {
+      rw [if_neg hq_zero] at hq_eq_abv,
+      rw [add_comm q _, abv_sum_of_abv_ne, hq_eq_abv, add_comm _ q, 
+      polynomial.nat_degree_add_C],
+      have hq_add_const_ne_zero: q + polynomial.C c ≠ 0,
+      {
+        apply mt polynomial.degree_eq_bot.2,
+        rw [polynomial.degree_add_C zero_lt_deg_q],
+        exact (mt polynomial.degree_eq_bot.1) hq_zero,
+      },
+      rw [if_neg hq_add_const_ne_zero],
+      {
+        intro h_deg_q,
+        rw [polynomial.eq_C_of_nat_degree_eq_zero h_deg_q, hq_coeff],
+        simp [hc_ne_zero],
+      },
+      {
+        rw [trivial_on_base c hc_ne_zero, hq_eq_abv],
+        refine one_lt_pow one_lt_abvx _,
+        exact 
+        (nat.succ_le_of_lt 
+          (polynomial.nat_degree_pos_iff_degree_pos.2 zero_lt_deg_q)),
+      },
+    },
+  },
+  { 
+    intros q hq_ne_zero habv_q,
+    rw [if_neg hq_ne_zero] at habv_q,
+    rw [if_neg (mul_ne_zero hq_ne_zero polynomial.X_ne_zero),
+      polynomial.nat_degree_mul hq_ne_zero polynomial.X_ne_zero, abv_mul abv, 
+      habv_q, ← pow_succ'],
+    simp,
+  },
+
 end
 
 theorem polynomial_abv_is_padic {R} [field R] [normalization_monoid R]

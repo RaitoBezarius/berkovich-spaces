@@ -3,6 +3,7 @@ import algebra.big_operators.basic
 import algebra.big_operators.ring
 
 import valuations.basic
+import for_mathlib.specific_limits
 
 open is_absolute_value
 open_locale classical big_operators
@@ -108,16 +109,15 @@ begin
         repeat { rw real.rpow_one at h₁, },
         exact h₁,
       },
-
+      have lim₀: filter.tendsto (λ n: ℕ, (C * (n + 1)) ^ (1/n: ℝ)) filter.at_top (nhds 1) := tendsto_comparison_at_top_nhds_1_of_pos h.1,
       have lim₁: filter.tendsto (λ n: ℕ, abv (a + b)) filter.at_top (nhds (abv (a + b))),
       { exact tendsto_const_nhds, },
       have lim₂: filter.tendsto
         (λ n: ℕ, (C * (n + 1)) ^ (1/n: ℝ) * (max (abv a) (abv b)))
         filter.at_top (nhds (max (abv a) (abv b))),
       {
-        -- TODO: aled
-        -- convert tendsto.mul_const (max (abv a) (abv b)) _,
-        sorry
+        convert tendsto.mul_const (max (abv a) (abv b)) lim₀,
+        rw one_mul,
       },
       
       apply le_of_tendsto_of_tendsto lim₁ lim₂,

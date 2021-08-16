@@ -18,3 +18,24 @@ begin
     apply tendsto_const_div_at_top_nhds_0_nat,
   }
 end
+
+-- [C(n + 1)]^(1/n) = exp(log(C[n + 1]) / n) = exp([log C / n] + log (n + 1) / log n)
+
+
+lemma tendsto_comparison_at_top_nhds_1_of_pos {C: ℝ} (C_pos: C > 0):
+  filter.tendsto (λ (n: ℕ), (C*(n + 1))^((1: ℝ) / n)) filter.at_top (nhds 1) :=
+begin
+  have h_exp_form: (λ (n: ℕ), (C*(n + 1))^((1: ℝ) / n)) = (λ (n: ℕ), real.exp((real.log (C*(n + 1)) / n))),
+  {
+    ext,
+    simp,
+    rw [div_eq_mul_inv, real.exp_mul, real.exp_log _],
+    sorry,
+  },
+  {
+    rw h_exp_form,
+    apply filter.tendsto.comp,
+    apply real.tendsto_exp_nhds_0_nhds_1,
+    sorry
+  }
+end

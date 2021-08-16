@@ -1,5 +1,6 @@
 import analysis.special_functions.pow
 import data.set.function
+import analysis.calculus.lhopital
 
 lemma tendsto_root_at_top_nhds_1_of_pos {C: ℝ} (c_pos: C > 0):
   filter.tendsto (λ (n: ℕ), C^((1: ℝ) / n)) filter.at_top (nhds 1) :=
@@ -22,13 +23,24 @@ end
 
 -- [C(n + 1)]^(1/n) = exp(log(C[n + 1]) / n) = exp([log C / n] + log (n + 1) / log n)
 
+lemma deriv.inverse_deriv {𝕜 F : Type*} [has_one (𝕜 → F)] [has_pow (𝕜 → F) ℕ] [has_div (𝕜 → F)] [normed_group F] [nondiscrete_normed_field 𝕜] [normed_space 𝕜 F]  {f: 𝕜 → F}:
+  deriv (1 / f) = - 1 / f^2 := sorry
 lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
-  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ f x)
-  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv g x ≠ 0)
+  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ (1 / f) x)
+  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv (1 / g) x ≠ 0)
   (hftop: filter.tendsto f filter.at_top filter.at_top)
   (hgtop: filter.tendsto g filter.at_top filter.at_top)
-  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top l):
-  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l := sorry
+  (hdiv: filter.tendsto (λ (x: ℝ), deriv g x / deriv f x) filter.at_top l):
+  filter.tendsto (λ (x: ℝ), g x / f x) filter.at_top l :=
+begin
+  have inv_hftop: filter.tendsto (1 / f) filter.at_top (nhds 0), from sorry,
+  have inv_hgtop: filter.tendsto (1 / g) filter.at_top (nhds 0), from sorry,
+  convert deriv.lhopital_zero_at_top hdf hg' inv_hftop inv_hgtop _,
+  ext, dsimp, rw [div_div_div_div_eq], simp,
+  convert hdiv,
+  sorry
+  -- ext, dsimp, rw [div_div_div_div_eq], simp,
+end
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x ≤ a) then c else (f x)) g := sorry

@@ -1,6 +1,7 @@
 import analysis.special_functions.pow
 import data.set.function
-import analysis.calculus.lhopital
+-- import analysis.calculus.lhopital
+import analysis.calculus.mean_value
 
 lemma tendsto_root_at_top_nhds_1_of_pos {C: ℝ} (c_pos: C > 0):
   filter.tendsto (λ (n: ℕ), C^((1: ℝ) / n)) filter.at_top (nhds 1) :=
@@ -29,18 +30,53 @@ lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
   (hftop: filter.tendsto f filter.at_top filter.at_top)
   (hgtop: filter.tendsto g filter.at_top filter.at_top)
   (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top l):
-  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l := sorry
+  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l :=
+begin
+  rw filter.tendsto_def,
+  intros s hs,
+  simp only [set.mem_preimage, filter.mem_at_top_sets, ge_iff_le],
+  obtain ⟨ δ, hdiv_lim ⟩ := filter.tendsto_at_top'.1 hdiv s hs,
+  have fact2 : ∀ (a b: ℝ), a < b → (∀ c ∈ set.Ioo a b, deriv g c ≠ 0) → ∃ (c: ℝ) (H: c ∈ set.Ioo a b), (deriv f c) / (deriv g c) = (f b - f a) / (g b - g a),
+  {
+    intros a b hab h_ne_cancel_g,
+    convert exists_ratio_deriv_eq_ratio_slope f hab _ _ g _ _,
+    ext,
+    simp only [and_imp, exists_prop, and.congr_right_iff],
+    intros hx_mem,
+    have fact₀ : g b - g a ≠ 0, from sorry,
+    have fact₁ : deriv g x ≠ 0, from h_ne_cancel_g x hx_mem,
+    field_simp [fact₀, fact₁, mul_comm _ (g b - g a), mul_comm _ (f b - f a)],
+    -- todo: take sets where hdf and hg' are true, to derive automatic continuity.
+    sorry,
+    sorry,
+    sorry,
+    sorry,
+  },
+  have fact3 : ∀ (x y: ℝ), g x ≠ 0 → g x - g y ≠ 0 → (f x - f y) / (g x - g y) = ((f x) / (g x) - (f y) / (g x)) / (1 - (g y) / (g x)),
+  {
+    intros x y hgx hdiffg,
+    have fact₀: 1 - (g y) / (g x) ≠ 0, by field_simp [hdiffg],
+    field_simp,
+    ring,
+  },
+  have fact4 : ∀ y: ℝ, filter.tendsto (λ (x: ℝ), (g y / g x)) filter.at_top (nhds 0),
+  {
+    intro y,
+    sorry,
+  },
+  -- obtain ⟨ x, y, c, ⟨ hxy, hc_xy, hmean ⟩ ⟩ := fact2,
+  sorry
+end
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x ≤ a) then c else (f x)) g := sorry
-lemma eventually.eq_of_eq_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_eq α]:
+
+lemma eventually.eq_of_eq_ite_at_top {α β: Type*} [preorder α] [no_top_order α] {f g: α → β} {a: α} {c: β} [decidable_eq α]:
   (λ (x: α), if (x = a) then c else (f x)) = g → filter.eventually_eq filter.at_top f g :=
 begin
   intro hext,
-  suffices: (set.Ioi a) ∈ filter.at_top ∧ set.eq_on f g (set.Ioi a),
-  from filter.eventually_eq_of_mem this.1 this.2,
-  split,
-  sorry,
+  suffices: set.eq_on f g (set.Ioi a),
+  from filter.eventually_eq_of_mem (filter.Ioi_mem_at_top a) this,
   rw ← hext,
   intros x hmem,
   simp [if_neg (ne_of_gt hmem)],

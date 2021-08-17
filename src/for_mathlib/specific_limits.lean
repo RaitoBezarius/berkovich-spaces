@@ -44,42 +44,74 @@ begin
   rw filter.mem_at_top_sets at hstarget_mem,
   rcases hstarget_mem with ⟨ δ, hδ ⟩,
   have hδ' : set.Ioi δ ⊆ starget := λ x hx, hδ x (le_of_lt hx),
-  have fact2 : ∀ (b: ℝ), δ < b → ∃ (c: ℝ) (H: c ∈ set.Ioo δ b), (deriv f c) / (deriv g c) = (f b - f δ) / (g b - g δ),
+  have fact2 : ∀ (a b: ℝ), δ ≤ a → a < b → ∃ (c: ℝ) (H: c ∈ set.Ioo a b), (deriv f c) / (deriv g c) = (f b - f a) / (g b - g a),
   {
     have hdg' : differentiable_on ℝ g s₂ := λ y hy, 
       differentiable_at.differentiable_within_at 
       (not_not.1 (mt deriv_zero_of_not_differentiable_at (hg' _ hy))),
-    intros b hb,
+    intros a b haδ hab,
     convert 
-      exists_ratio_deriv_eq_ratio_slope f hb 
+      exists_ratio_deriv_eq_ratio_slope f hab 
       (λ y hy, continuous_at.continuous_within_at 
-      (differentiable_at.continuous_at (hdf _ (hδ _ hy.1).1)))
+      (differentiable_at.continuous_at (hdf _ (hδ _ (le_trans haδ hy.1)).1)))
       (λ y hy, differentiable_at.differentiable_within_at 
-        (hdf _ (hδ _ (le_of_lt hy.1)).1))
+        (hdf _ (hδ _ (le_trans haδ (le_of_lt hy.1))).1))
       g 
-      (differentiable_on.mono hdg' (λ z (hz: z ∈ set.Icc δ b), (hδ _ hz.1).2)).continuous_on 
-      (differentiable_on.mono hdg' (λ y hy, (hδ _ (le_of_lt hy.1)).2)),
+      (differentiable_on.mono hdg' (λ z (hz: z ∈ set.Icc a b), (hδ _ (le_trans haδ hz.1)).2)).continuous_on 
+      (differentiable_on.mono hdg' (λ y hy, (hδ _ (le_trans haδ (le_of_lt hy.1))).2)),
     ext,
     simp only [and_imp, exists_prop, and.congr_right_iff],
     intros hx_mem,
-    have fact₀ : g b - g δ  ≠ 0, from sorry,
-    have fact₁ : deriv g x ≠ 0, from hg' _ (hδ _ (le_of_lt hx_mem.1)).2,
-    field_simp [fact₀, fact₁, mul_comm _ (g b - g δ), mul_comm _ (f b - f δ)],
+    -- g' nonzero, therefore g monotone, therefore g a < g b, therefore g b - g a ≠ 0
+    have fact₀ : g b - g a ≠ 0, from sorry,
+    have fact₁ : deriv g x ≠ 0, from hg' _ (hδ _ (le_trans haδ (le_of_lt hx_mem.1))).2,
+    field_simp [fact₀, fact₁, mul_comm _ (g b - g a), mul_comm _ (f b - f a)],
   },
-  have fact3 : ∀ (x y: ℝ), g x ≠ 0 → g x - g y ≠ 0 → (f x - f y) / (g x - g y) = ((f x) / (g x) - (f y) / (g x)) / (1 - (g y) / (g x)),
+  have fact2_plus: ∀ (s: set ℝ) (hs: s ∈ l), ∃ (c: ℝ), ∀ (a b: ℝ), c ≤ a → a < b → (f b - f a) / (g b - g a) ∈ s,
   {
-    intros x y hgx hdiffg,
-    have fact₀: 1 - (g y) / (g x) ≠ 0, by field_simp [hdiffg],
-    field_simp,
-    ring,
+    choose! k P Q using fact2,
+    rw filter.tendsto_at_top' at hdiv,
+    intros u hu,
+    obtain ⟨ δ', hdiv' ⟩ := hdiv u hu,
+    use (max δ δ'),
+    intros a b haδ hab,
+    have: δ ≤ a, from le_trans (le_max_left _ _) haδ,
+    rw [← Q a b this hab],
+    exact 
+      hdiv' 
+      _ 
+      (le_trans 
+        (le_max_right _ _) 
+        (le_trans 
+          haδ 
+          (le_of_lt 
+            (P a b this hab).1
+          )
+        )
+      ),
   },
-  have fact4 : ∀ y: ℝ, filter.tendsto (λ (x: ℝ), (g y / g x)) filter.at_top (nhds 0),
+  suffices fact4 : filter.tendsto 
+  (λ (x: ℝ), ((f x) / (g x) - (f δ) / (g x)) / (1 - (g δ) / (g x))) filter.at_top l,
   {
-    intro y,
     sorry,
   },
-  -- obtain ⟨ x, y, c, ⟨ hxy, hc_xy, hmean ⟩ ⟩ := fact2,
-  sorry
+  rw [filter.tendsto_def],
+  intros s' hs',
+  refine filter.eventually_at_top.2 _,
+  obtain ⟨ c, hc ⟩ := fact2_plus s' hs',
+  use c,
+  intros x hx,
+  simp,
+  convert hc x δ hx _ using 1,
+  {
+    have fact₀: 1 - (g δ) / (g x) ≠ 0, by sorry,
+    have fact₁: g x ≠ 0, by sorry,
+    have hdiffg: g x - g δ ≠ 0, by sorry,
+    have hdiffg': g δ - g x ≠ 0, by sorry,
+    field_simp [fact₀, fact₁, hdiffg],
+    ring,
+  },
+  sorry,
 end
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:

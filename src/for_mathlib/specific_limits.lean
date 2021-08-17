@@ -3,6 +3,41 @@ import data.set.function
 -- import analysis.calculus.lhopital
 import analysis.calculus.mean_value
 
+open filter
+open_locale filter topological_space
+
+lemma tendsto_aux1 {l: ℝ} {f g: ℝ → ℝ}
+  (hg: filter.tendsto g filter.at_top (nhds 0))
+  (hc: filter.tendsto (f / (1 - g)) filter.at_top (nhds l)):
+  filter.tendsto f filter.at_top (nhds l) :=
+  begin
+    have lim₁ : tendsto (1 - g) at_top (𝓝 1),
+    { rw ← sub_zero (1 : ℝ),
+      exact tendsto_const_nhds.sub hg },
+    have : (λ (x : ℝ), (1 - g) x * (f / (1 - g)) x) =ᶠ[at_top] f,
+    { have : {(0 : ℝ)}ᶜ ∈ 𝓝 (1 : ℝ) := compl_singleton_mem_nhds zero_ne_one.symm,
+      have : ∀ᶠ (x : ℝ) in at_top, (1 - g) x ∈ ({(0 : ℝ)} : set ℝ)ᶜ := lim₁ this,
+      apply this.mono,
+      intros x hx,
+      replace hx : 1 - g x ≠ 0, by simpa using hx,
+      exact mul_div_cancel' _ hx  },
+    simpa using (tendsto_congr' this).mp (lim₁.mul hc)
+  end
+
+lemma tendsto_aux2 {u: filter ℝ} {l: ℝ} {f g: ℝ → ℝ}
+  (hfg: filter.tendsto (f - g) u (nhds 0))
+  (hg: filter.tendsto g u (nhds l)):
+  filter.tendsto f u (nhds l) := by convert hfg.add hg; simp
+
+lemma tendsto_aux3 {u: filter ℝ} {l: ℝ} {f g: ℝ → ℝ}
+  (hfg: filter.tendsto (f - g) u (nhds l))
+  (hg: filter.tendsto g u (nhds 0)):
+  filter.tendsto f u (nhds l) := by convert hfg.add hg; simp
+
+lemma tendsto_aux4 {u: filter ℝ} {f: ℝ → ℝ} {c: ℝ}
+  (hf: tendsto f u at_top):
+  tendsto (λ (x: ℝ), c / f x) u (nhds 0) := sorry
+
 lemma tendsto_root_at_top_nhds_1_of_pos {C: ℝ} (c_pos: C > 0):
   filter.tendsto (λ (n: ℕ), C^((1: ℝ) / n)) filter.at_top (nhds 1) :=
 begin
@@ -24,21 +59,19 @@ end
 
 -- [C(n + 1)]^(1/n) = exp(log(C[n + 1]) / n) = exp([log C / n] + log (n + 1) / log n)
 
-lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
+lemma deriv.lhopital_inf_at_top {l: ℝ} {f g: ℝ → ℝ}
   (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ f x)
   (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv g x ≠ 0)
   (hftop: filter.tendsto f filter.at_top filter.at_top)
   (hgtop: filter.tendsto g filter.at_top filter.at_top)
-  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top l):
-  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l :=
+  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top (nhds l)):
+  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top (nhds l) :=
 begin
   rw filter.eventually_iff_exists_mem at *,
+
   rcases hdf with ⟨ s₁, hs₁, hdf ⟩,
   rcases hg' with ⟨ s₂, hs₂, hg' ⟩,
-  rw filter.tendsto_def,
-  intros s hs,
-  -- simp only [set.mem_preimage, filter.mem_at_top],
-  -- obtain ⟨ δ₃, hdiv_lim ⟩ := filter.tendsto_at_top'.1 hdiv s hs,
+
   let starget := s₁∩s₂, 
   have hstarget_mem: starget ∈ filter.at_top := filter.inter_mem_sets hs₁ hs₂,
   rw filter.mem_at_top_sets at hstarget_mem,
@@ -67,7 +100,7 @@ begin
     have fact₁ : deriv g x ≠ 0, from hg' _ (hδ _ (le_trans haδ (le_of_lt hx_mem.1))).2,
     field_simp [fact₀, fact₁, mul_comm _ (g b - g a), mul_comm _ (f b - f a)],
   },
-  have fact2_plus: ∀ (s: set ℝ) (hs: s ∈ l), ∃ (c: ℝ), ∀ (a b: ℝ), c ≤ a → a < b → (f b - f a) / (g b - g a) ∈ s,
+  have fact2_plus: ∀ (s: set ℝ) (hs: s ∈ (nhds l)), ∃ (c: ℝ), ∀ (a b: ℝ), c ≤ a → a < b → (f b - f a) / (g b - g a) ∈ s,
   {
     choose! k P Q using fact2,
     rw filter.tendsto_at_top' at hdiv,
@@ -90,28 +123,29 @@ begin
         )
       ),
   },
-  suffices fact4 : filter.tendsto 
-  (λ (x: ℝ), ((f x) / (g x) - (f δ) / (g x)) / (1 - (g δ) / (g x))) filter.at_top l,
+  have fact4 : filter.tendsto 
+  (λ (x: ℝ), ((f x) / (g x) - (f δ) / (g x)) / (1 - (g δ) / (g x))) filter.at_top (nhds l),
   {
-    sorry,
+    rw [filter.tendsto_def],
+    intros s' hs',
+    refine filter.eventually_at_top.2 _,
+    obtain ⟨ c, hc ⟩ := fact2_plus s' hs',
+    use c,
+    intros x hx,
+    simp,
+    convert hc x δ hx _ using 1,
+    {
+      have fact₀: 1 - (g δ) / (g x) ≠ 0, by sorry,
+      have fact₁: g x ≠ 0, by sorry,
+      have hdiffg: g x - g δ ≠ 0, by sorry,
+      have hdiffg': g δ - g x ≠ 0, by sorry,
+      field_simp [fact₀, fact₁, hdiffg],
+      ring,
+    },
+    sorry,  
   },
-  rw [filter.tendsto_def],
-  intros s' hs',
-  refine filter.eventually_at_top.2 _,
-  obtain ⟨ c, hc ⟩ := fact2_plus s' hs',
-  use c,
-  intros x hx,
-  simp,
-  convert hc x δ hx _ using 1,
-  {
-    have fact₀: 1 - (g δ) / (g x) ≠ 0, by sorry,
-    have fact₁: g x ≠ 0, by sorry,
-    have hdiffg: g x - g δ ≠ 0, by sorry,
-    have hdiffg': g δ - g x ≠ 0, by sorry,
-    field_simp [fact₀, fact₁, hdiffg],
-    ring,
-  },
-  sorry,
+  convert tendsto_aux3 (tendsto_aux1 _ fact4) _,
+  all_goals { exact tendsto_aux4 hgtop },
 end
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:

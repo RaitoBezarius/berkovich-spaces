@@ -34,7 +34,17 @@ lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x ≤ a) then c else (f x)) g := sorry
 lemma eventually.eq_of_eq_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_eq α]:
-  filter.eventually_eq filter.at_top (λ (x: α), if (x = a) then c else (f x)) g := sorry
+  (λ (x: α), if (x = a) then c else (f x)) = g → filter.eventually_eq filter.at_top f g :=
+begin
+  intro hext,
+  suffices: (set.Ioi a) ∈ filter.at_top ∧ set.eq_on f g (set.Ioi a),
+  from filter.eventually_eq_of_mem this.1 this.2,
+  split,
+  sorry,
+  rw ← hext,
+  intros x hmem,
+  simp [if_neg (ne_of_gt hmem)],
+end
 
 lemma deriv.log_1_plus_x: deriv (λ (x: ℝ), real.log (1 + x)) = λ (x: ℝ), if x = -1 then 0 else (1 / (1 + x)) :=
 begin
@@ -62,7 +72,7 @@ end
 lemma deriv.log_1_plus_x_eventually_at_top: 
   filter.eventually_eq filter.at_top 
   (deriv (λ (x: ℝ), real.log (1 + x))) (λ (x: ℝ), 1 / (1 + x)) :=
-by rw [deriv.log_1_plus_x]; exact eventually.eq_of_eq_ite_at_top
+(eventually.eq_of_eq_ite_at_top (deriv.log_1_plus_x.symm)).symm
 
 lemma tendsto_log1_plus_x_under_x_at_top_nhds_1:
   filter.tendsto (λ (x: ℝ), real.log (1 + x) / x) filter.at_top (nhds 0) :=

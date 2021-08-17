@@ -32,25 +32,39 @@ lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
   (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top l):
   filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l :=
 begin
+  rw filter.eventually_iff_exists_mem at *,
+  rcases hdf with ⟨ s₁, hs₁, hdf ⟩,
+  rcases hg' with ⟨ s₂, hs₂, hg' ⟩,
   rw filter.tendsto_def,
   intros s hs,
-  simp only [set.mem_preimage, filter.mem_at_top_sets, ge_iff_le],
-  obtain ⟨ δ, hdiv_lim ⟩ := filter.tendsto_at_top'.1 hdiv s hs,
-  have fact2 : ∀ (a b: ℝ), a < b → (∀ c ∈ set.Ioo a b, deriv g c ≠ 0) → ∃ (c: ℝ) (H: c ∈ set.Ioo a b), (deriv f c) / (deriv g c) = (f b - f a) / (g b - g a),
+  -- simp only [set.mem_preimage, filter.mem_at_top],
+  -- obtain ⟨ δ₃, hdiv_lim ⟩ := filter.tendsto_at_top'.1 hdiv s hs,
+  let starget := s₁∩s₂, 
+  have hstarget_mem: starget ∈ filter.at_top := filter.inter_mem_sets hs₁ hs₂,
+  rw filter.mem_at_top_sets at hstarget_mem,
+  rcases hstarget_mem with ⟨ δ, hδ ⟩,
+  have hδ' : set.Ioi δ ⊆ starget := λ x hx, hδ x (le_of_lt hx),
+  have fact2 : ∀ (b: ℝ), δ < b → ∃ (c: ℝ) (H: c ∈ set.Ioo δ b), (deriv f c) / (deriv g c) = (f b - f δ) / (g b - g δ),
   {
-    intros a b hab h_ne_cancel_g,
-    convert exists_ratio_deriv_eq_ratio_slope f hab _ _ g _ _,
+    have hdg' : differentiable_on ℝ g s₂ := λ y hy, 
+      differentiable_at.differentiable_within_at 
+      (not_not.1 (mt deriv_zero_of_not_differentiable_at (hg' _ hy))),
+    intros b hb,
+    convert 
+      exists_ratio_deriv_eq_ratio_slope f hb 
+      (λ y hy, continuous_at.continuous_within_at 
+      (differentiable_at.continuous_at (hdf _ (hδ _ hy.1).1)))
+      (λ y hy, differentiable_at.differentiable_within_at 
+        (hdf _ (hδ _ (le_of_lt hy.1)).1))
+      g 
+      (differentiable_on.mono hdg' (λ z (hz: z ∈ set.Icc δ b), (hδ _ hz.1).2)).continuous_on 
+      (differentiable_on.mono hdg' (λ y hy, (hδ _ (le_of_lt hy.1)).2)),
     ext,
     simp only [and_imp, exists_prop, and.congr_right_iff],
     intros hx_mem,
-    have fact₀ : g b - g a ≠ 0, from sorry,
-    have fact₁ : deriv g x ≠ 0, from h_ne_cancel_g x hx_mem,
-    field_simp [fact₀, fact₁, mul_comm _ (g b - g a), mul_comm _ (f b - f a)],
-    -- todo: take sets where hdf and hg' are true, to derive automatic continuity.
-    sorry,
-    sorry,
-    sorry,
-    sorry,
+    have fact₀ : g b - g δ  ≠ 0, from sorry,
+    have fact₁ : deriv g x ≠ 0, from hg' _ (hδ _ (le_of_lt hx_mem.1)).2,
+    field_simp [fact₀, fact₁, mul_comm _ (g b - g δ), mul_comm _ (f b - f δ)],
   },
   have fact3 : ∀ (x y: ℝ), g x ≠ 0 → g x - g y ≠ 0 → (f x - f y) / (g x - g y) = ((f x) / (g x) - (f y) / (g x)) / (1 - (g y) / (g x)),
   {

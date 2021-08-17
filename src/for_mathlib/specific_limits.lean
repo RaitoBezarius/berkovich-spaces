@@ -35,7 +35,29 @@ lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → �
   filter.eventually_eq filter.at_top (λ (x: α), if (x ≤ a) then c else (f x)) g := sorry
 lemma eventually.eq_of_eq_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_eq α]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x = a) then c else (f x)) g := sorry
-lemma deriv.log_1_plus_x: deriv (λ (x: ℝ), real.log (1 + x)) = λ (x: ℝ), if x = -1 then 0 else (1 / (1 + x)) := sorry
+
+lemma deriv.log_1_plus_x: deriv (λ (x: ℝ), real.log (1 + x)) = λ (x: ℝ), if x = -1 then 0 else (1 / (1 + x)) :=
+begin
+  ext,
+  by_cases (x = -1),
+  {
+    rw [if_pos h, h],
+    convert deriv_zero_of_not_differentiable_at
+      (
+        (mt real.differentiable_at_log_iff.1) 
+        (not_not.2 ((add_eq_zero_iff_eq_neg.2) h))
+      )
+    using 1,
+    rw [add_comm x 1],
+    -- todo: handle eval properly because rw cannot see through deriv.
+    sorry,
+  },
+  {
+    rw [if_neg h],
+    convert deriv.log _ _,
+    repeat { simp [add_comm 1 x, (mt add_eq_zero_iff_eq_neg.1) h] },
+  },
+end
 
 lemma deriv.log_1_plus_x_eventually_at_top: 
   filter.eventually_eq filter.at_top 

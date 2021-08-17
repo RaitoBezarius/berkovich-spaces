@@ -23,30 +23,18 @@ end
 
 -- [C(n + 1)]^(1/n) = exp(log(C[n + 1]) / n) = exp([log C / n] + log (n + 1) / log n)
 
-lemma deriv.inverse_deriv {𝕜 F : Type*} [has_one (𝕜 → F)] [has_pow (𝕜 → F) ℕ] [has_div (𝕜 → F)] [normed_group F] [nondiscrete_normed_field 𝕜] [normed_space 𝕜 F]  {f: 𝕜 → F}:
-  deriv (1 / f) = - 1 / f^2 := sorry
 lemma deriv.lhopital_inf_at_top {l: filter ℝ} {f g: ℝ → ℝ}
-  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ (1 / f) x)
-  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv (1 / g) x ≠ 0)
+  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ f x)
+  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv g x ≠ 0)
   (hftop: filter.tendsto f filter.at_top filter.at_top)
   (hgtop: filter.tendsto g filter.at_top filter.at_top)
-  (hdiv: filter.tendsto (λ (x: ℝ), deriv g x / deriv f x) filter.at_top l):
-  filter.tendsto (λ (x: ℝ), g x / f x) filter.at_top l :=
-begin
-  have inv_hftop: filter.tendsto (1 / f) filter.at_top (nhds 0), from sorry,
-  have inv_hgtop: filter.tendsto (1 / g) filter.at_top (nhds 0), from sorry,
-  convert deriv.lhopital_zero_at_top hdf hg' inv_hftop inv_hgtop _,
-  ext, dsimp, rw [div_div_div_div_eq], simp,
-  convert hdiv,
-  sorry
-  -- ext, dsimp, rw [div_div_div_div_eq], simp,
-end
+  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top l):
+  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top l := sorry
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x ≤ a) then c else (f x)) g := sorry
 lemma eventually.eq_of_eq_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_eq α]:
   filter.eventually_eq filter.at_top (λ (x: α), if (x = a) then c else (f x)) g := sorry
-
 lemma deriv.log_1_plus_x: deriv (λ (x: ℝ), real.log (1 + x)) = λ (x: ℝ), if x = -1 then 0 else (1 / (1 + x)) := sorry
 
 lemma deriv.log_1_plus_x_eventually_at_top: 
@@ -81,12 +69,22 @@ begin
     ext,
     simp,
     rw [div_eq_mul_inv, real.exp_mul, real.exp_log _],
-    sorry,
+    exact (zero_lt_mul_right (by exact_mod_cast nat.zero_lt_succ _)).2 C_pos,
   },
   {
     rw h_exp_form,
     apply filter.tendsto.comp,
     apply real.tendsto_exp_nhds_0_nhds_1,
-    sorry
+    have : (λ (x: ℕ), real.log (C * (x + 1)) / x) = (λ (x: ℕ), ((real.log C / x) + real.log (1 + x) / x)),
+    {
+      ext,
+      rw_mod_cast [real.log_mul (ne_of_gt C_pos) _, add_comm x 1, add_div _ _],
+      exact_mod_cast nat.succ_ne_zero _,
+    },
+    rw [this],
+    convert filter.tendsto.add
+    (tendsto_const_div_at_top_nhds_0_nat (real.log C))
+    (tendsto_log1_plus_x_under_x_at_top_nhds_1.comp tendsto_coe_nat_at_top_at_top),
+    simp,
   }
 end

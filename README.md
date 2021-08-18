@@ -1,8 +1,8 @@
-# Berkovich spaces formalization
+# Towards Berkovich spaces formalization
 
 This is an attempt to formalize Berkovich spaces in the Lean theorem prover.
 
-So far, Ostrowski theorems have been formalized:
+So far, only Ostrowski theorems have been formalized:
 
 - over rationals ;
 - over polynomials (should be possible to extend it to K(X) with more work).

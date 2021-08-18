@@ -45,7 +45,7 @@ begin
   ... = (x - 1)⁻¹ * (x ^ n * x - 1) : by rw pow_succ' x n
   ... = (x - 1)⁻¹ * (x ^ n * x - x ^ (-n: ℤ) * x ^ (n: ℤ)) : by rw [fpow_neg_mul_fpow_self n hx_ne_0]
   ... = (x - 1)⁻¹ * (x ^ n * x - x ^ n * x ^ (-n: ℤ)) : by norm_cast; ring_nf
-  ... = (x - 1)⁻¹ * x ^ n * (x - x⁻¹ ^ n) : by sorry
+  ... = (x - 1)⁻¹ * x ^ n * (x - x⁻¹ ^ n) : by rw [← mul_sub_left_distrib _ _ _, ← mul_assoc]; simp [inv_fpow]
   ... = (x - 1)⁻¹ * x ^ n * (x - x⁻¹ ^ n * 1) : by rw mul_one (x⁻¹ ^ n)
   ... = (x - 1)⁻¹ * x ^ n * (x - x⁻¹ ^ n * (x⁻¹ * x)) : by rw inv_mul_cancel hx_ne_0
   ... = (x - 1)⁻¹ * x ^ n * (x - x⁻¹ ^ (n + 1) * x)  : by rw [← mul_assoc, pow_succ' x⁻¹ n]

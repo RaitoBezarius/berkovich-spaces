@@ -22,7 +22,7 @@ instance degree_norm.is_absolute_value {R} [field R] (c: ℝ) (one_lt_c: 1 < c):
 begin
   have c_pos := (lt_trans zero_lt_one one_lt_c),
   exact { abv_nonneg := λ p, if h: p = 0
-      then by simp [degree_norm, h, int.zero_nonneg.le]
+      then by simp [degree_norm, h, int.zero_nonneg]
       else by simp [degree_norm, h, pow_nonneg (le_of_lt c_pos) p.nat_degree],
     abv_eq_zero := λ p, if h: p = 0
       then by simp [degree_norm, h]
@@ -59,7 +59,7 @@ begin
           cases eq_zero_or_eq_zero_of_mul_eq_zero hpq,
           exact hp h, exact hq h,
         },
-        have := (@polynomial.degree_mul _ _ p q),
+        have := (@polynomial.degree_mul _ _ _ p q),
         rw polynomial.degree_eq_nat_degree hp at this,
         rw polynomial.degree_eq_nat_degree hq at this,
         rw polynomial.degree_eq_nat_degree hpq at this,
@@ -107,7 +107,7 @@ begin
       ... = abv b : max_eq_right (le_of_lt hab),
     have h₀: abv b ≤ max (abv a) (abv (a + b)),
     {
-      calc abv b = abv (-a + (a + b)) : by ring
+      calc abv b = abv (-a + (a + b)) : by ring_nf
         ... ≤ max (abv (-a)) (abv (a + b)) : nonarchimedian _ _
         ... = max (abv a) (abv (a + b)) : by rw abv_neg abv
     },
@@ -219,7 +219,7 @@ theorem polynomial_abv_is_padic {R} [field R] [normalization_monoid R]
   (nontrivial: abv ≠ (λ x, if x = 0 then 0 else 1))
   (abvx_le_one: abv polynomial.X ≤ 1)
   (trivial_on_base: ∀ x: R, x ≠ 0 → abv (polynomial.C x) = 1):
-    ∃ (p: polynomial R) (p_prime: prime p), abvs_equiv abv (sample_padic_abv p p_prime) :=
+    ∃ (p: polynomial R) [p_prime: fact (prime p)], abvs_equiv abv (@sample_padic_abv _ _ _ _ p p_prime) :=
 begin
   apply abv_bounded_padic abv,
   {

@@ -1,5 +1,3 @@
--- import data.real.cau_seq
-import data.padics.padic_norm
 import algebra.associated
 
 import abvs_equiv
@@ -14,19 +12,20 @@ import for_mathlib.padic_norm
 import for_mathlib.int
 import for_mathlib.exp_log
 
+import number_theory.padics.padic_norm
+
 open is_absolute_value
 
 open_locale classical
 noncomputable theory
 
-lemma padic_norm_q (p: ℕ) (q: ℤ) (p_prime: prime p) (q_prime: prime q):
+lemma padic_norm_q (p: ℕ) (q: ℤ) [p_prime: fact (nat.prime p)] [q_prime: fact (prime q)]:
   padic_norm p q = if associated q p then 1/p else 1 :=
 begin
-  haveI: fact (nat.prime p) := nat.prime_iff_prime.2 p_prime,
   exact if h: associated q p
     then by {
       rw show padic_norm p q = padic_norm p p,
-      by {
+      by unfreezingI {
         rcases h.symm with ⟨ u, rfl ⟩,
         push_cast,
         rw abv_mul (padic_norm p),
@@ -34,7 +33,7 @@ begin
         by { cases units_int.values u with h h; simp [h], },
         rw mul_one,
       },
-      simp [h, @padic_norm.padic_norm_p_of_prime p (nat.prime_iff_prime.2 p_prime)],
+      simp [h, padic_norm.padic_norm_p_of_prime p],
     }
     else by {
       unfold padic_norm,
@@ -42,20 +41,19 @@ begin
       have: multiplicity (p: ℤ) q = 0,
       {
         have p_int_prime: prime (p: ℤ) := nat.prime_iff_prime_int.1
-          (nat.prime_iff_prime.2 p_prime),
+          (fact_iff.1 p_prime),
         simp [h, multiplicity.multiplicity_eq_zero_of_not_dvd
-          (λ h', h (primes_associated_of_dvd p_int_prime q_prime h').symm)],
+          (λ h', h (primes_associated_of_dvd p_int_prime (fact_iff.1 q_prime) h').symm)],
       },
-      simp [h, p_prime.1, q_prime.1, p_prime.ne_one, this],
+      simp [h, (fact_iff.1 p_prime).1, (fact_iff.1 q_prime).1, (fact_iff.1 p_prime).ne_one, this],
     },
 end
 
-def rat_padic_abv (p: ℕ) (p_prime: nat.prime p): ℚ → ℝ := λ x: ℚ, (padic_norm p x: ℝ)
+def rat_padic_abv (p: ℕ) [p_prime: fact (nat.prime p)]: ℚ → ℝ := λ x: ℚ, (padic_norm p x: ℝ)
 
-instance rat_padic_abv_is_absolute_value (p: ℕ) (p_prime: nat.prime p):
-  is_absolute_value (rat_padic_abv p p_prime) :=
+instance rat_padic_abv_is_absolute_value (p: ℕ) [p_prime: fact (nat.prime p)]:
+  is_absolute_value (rat_padic_abv p) :=
 begin
-  haveI: fact (nat.prime p) := p_prime,
   exact { abv_nonneg := by { unfold rat_padic_abv, norm_cast, exact abv_nonneg (padic_norm p), },
     abv_eq_zero := by { unfold rat_padic_abv, norm_cast, intro x, exact abv_eq_zero (padic_norm p), },
     abv_add := by { unfold rat_padic_abv, norm_cast, exact abv_add (padic_norm p), },
@@ -77,7 +75,7 @@ def inj_ℚ_ℝ_hom: monoid_with_zero_hom ℚ ℝ :=
 lemma rat_abs_val_one_bounded_padic (abv : ℚ → ℝ) [habv : is_absolute_value abv]
       (hnontriv: abv ≠ trivial_abs)
       (bounded: (∀ z : ℕ, abv z ≤ 1)):
-      ∃ (p) [p_prime: nat.prime p], abvs_equiv abv (rat_padic_abv p p_prime) :=
+      ∃ (p) [p_prime: fact (nat.prime p)], abvs_equiv abv (@rat_padic_abv p p_prime) :=
 begin
   set abv': ℤ → ℝ := (λ k, abv k) with abv'_def,
   haveI: is_absolute_value abv' := {
@@ -128,16 +126,16 @@ begin
       },
   },
 
-  obtain ⟨ p, p_prime, equiv ⟩: ∃ (p: ℤ) (p_prime: prime p),
-    abvs_equiv abv' (sample_padic_abv p p_prime),
+  obtain ⟨ p, p_prime, equiv ⟩: ∃ (p: ℤ) [p_prime: fact (prime p)],
+    abvs_equiv abv' (@sample_padic_abv _ _ _ _ p p_prime),
   from abv_bounded_padic abv' bounded' nontrivial',
-  have p_abs_prime: nat.prime p.nat_abs := int.prime_iff_nat_abs_prime.1 p_prime,
+  haveI p_abs_prime: fact (p.nat_abs.prime) := fact_iff.2 (int.prime_iff_nat_abs_prime.1 (fact_iff.1 p_prime)),
   use [p.nat_abs, p_abs_prime],
   have p_abs_pos: 0 < (p.nat_abs: ℝ),
-  { norm_cast, exact (gt_iff_lt.1 $ int.nat_abs_pos_of_ne_zero p_prime.1), },
+  { norm_cast, exact (gt_iff_lt.1 $ int.nat_abs_pos_of_ne_zero (fact_iff.1 p_prime).1), },
 
   rcases equiv with ⟨ α, α_pos, h ⟩,
-  have eq_α: ∀ x, (abv' x) ^ α = sample_padic_abv p p_prime x,
+  have eq_α: ∀ x, (abv' x) ^ α = sample_padic_abv p x,
   { rw ← h, exact λ x, rfl, },
   set β := real.log (1/p.nat_abs) / real.log (1/2) with β_def,
   have β_pos: 0 < β,
@@ -145,30 +143,30 @@ begin
     refine div_pos_of_neg_of_neg
       (real.log_neg (div_pos zero_lt_one p_abs_pos) $ (div_lt_one p_abs_pos).2 _)
       (real.log_neg one_half_pos $ (div_lt_one _).2 one_lt_two),
-    norm_cast, exact nat.prime.one_lt p_abs_prime,
+    norm_cast, exact nat.prime.one_lt (fact_iff.1 p_abs_prime),
     exact zero_lt_two,
   },
   have αβ_pos: 0 < α * β := mul_pos α_pos β_pos,
 
-  have eq_β: ∀ x, sample_padic_abv p p_prime x ^ β = rat_padic_abv p.nat_abs p_abs_prime x,
+  have eq_β: ∀ x, sample_padic_abv p x ^ β = @rat_padic_abv p.nat_abs p_abs_prime x,
   {
     unfold rat_padic_abv,
-    suffices: (λ x, sample_padic_abv p p_prime x ^ β) = (λ x, padic_norm p.nat_abs x),
+    suffices: (λ x, sample_padic_abv p x ^ β) = (λ x, padic_norm p.nat_abs x),
     {
       intro x,
-      have: (λ x, sample_padic_abv p p_prime x ^ β) x = (λ x, padic_norm p.nat_abs x) x,
+      have: (λ x, sample_padic_abv p x ^ β) x = (λ x, padic_norm p.nat_abs x) x,
       by rw this,
       exact this,
     },
     haveI: fact (nat.prime p.nat_abs) := p_abs_prime,
-    set φ₁ := hom_of_equiv (hom_of_abv (sample_padic_abv p p_prime)) β β_pos
+    set φ₁ := hom_of_equiv (hom_of_abv (sample_padic_abv p)) β β_pos
       (by {
-        have φ_f: sample_padic_abv p p_prime = hom_of_abv (sample_padic_abv p p_prime) := rfl,
+        have φ_f: sample_padic_abv p = hom_of_abv (sample_padic_abv p) := rfl,
         rw ← φ_f,
-        exact abv_nonneg (sample_padic_abv p p_prime),
+        exact abv_nonneg (sample_padic_abv p),
       }) with φ₁_def,
     set φ₂ := (inj_ℚ_ℝ_hom.comp $ hom_of_abv (padic_norm p.nat_abs)).comp inj_ℤ_ℚ_hom with φ₂_def,
-    have φ₁_f: (λ x, sample_padic_abv p p_prime x ^ β) = φ₁ := rfl,
+    have φ₁_f: (λ x, sample_padic_abv p x ^ β) = φ₁ := rfl,
     have φ₂_f: (λ k: ℤ, (padic_norm p.nat_abs k: ℝ)) = φ₂ := rfl,
     rw [φ₁_f, φ₂_f],
     suffices: φ₁ = φ₂, by rw this,
@@ -178,15 +176,16 @@ begin
       dsimp,
       intro u,
       cases units_int.values u with h h;
-      simp [h, abv_neg (sample_padic_abv p p_prime), abv_one (sample_padic_abv p p_prime)],
+      simp [h, abv_neg (sample_padic_abv p), abv_one (sample_padic_abv p)],
     },
     {
       intros q hq,
-      have q_prime := principal_ideal_ring.irreducible_iff_prime.1 hq,
+      haveI q_prime := fact_iff.2 (principal_ideal_ring.irreducible_iff_prime.1 hq),
       rw [← φ₁_f, ← φ₂_f],
       dsimp,
-      rw padic_norm_q p.nat_abs q (nat.prime_iff_prime.1 p_abs_prime) q_prime,
-      rw sample_padic_abv_on_primes p p_prime q q_prime,
+      haveI : fact (prime p.nat_abs) := fact_iff.2 (nat.prime_iff.1 (fact_iff.1 p_abs_prime)),
+      rw padic_norm_q p.nat_abs q,
+      rw sample_padic_abv_on_primes p q (fact_iff.1 q_prime),
       exact if h: associated q p
         then by {
           have: associated q p.nat_abs,
@@ -214,7 +213,7 @@ begin
   apply funext,
   rw rat.forall,
   intros a b,
-  rw [abv_div abv, abv_div (rat_padic_abv _ _)],
+  rw [abv_div abv, abv_div (rat_padic_abv _)],
   {
     rw real.div_rpow (abv_nonneg abv _) (abv_nonneg abv _),
     rw real.rpow_mul (abv_nonneg abv _),
@@ -222,5 +221,6 @@ begin
     rw [eq_α a, eq_α b, eq_β a, eq_β b],
   },
   -- I didn't find a way to make the typeclasses work :/
-  exact rat_padic_abv_is_absolute_value p.nat_abs p_abs_prime,
+  -- But, I did. :-)
+  exact rat_padic_abv_is_absolute_value p.nat_abs,
 end

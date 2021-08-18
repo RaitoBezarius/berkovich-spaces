@@ -15,7 +15,7 @@ theorem submodule.is_principal.prime_generator_of_prime {α} [comm_ring α] (I: 
     intro h,
     have p₁: I = ⊤,
     from ideal.eq_top_of_is_unit_mem I (submodule.is_principal.generator_mem I) h,
-    exact is_prime.1 p₁,
+    exact ideal.is_prime.ne_top is_prime p₁,
   },
   by {
     simp only [← submodule.is_principal.mem_iff_generator_dvd I],

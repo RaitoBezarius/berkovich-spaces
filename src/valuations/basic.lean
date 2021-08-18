@@ -21,15 +21,15 @@ set_option old_structure_cmd true
 
 def padic_val {α} [integral_domain α] [is_principal_ideal_ring α]
     [normalization_monoid α]
-    (p: α) (p_prime: prime p) (a: α): ℕ :=
+    (p: α) [p_prime: fact (prime p)] (a: α): ℕ :=
   if a ≠ 0
       then multiset.count (normalize p) (unique_factorization_monoid.factors a)
       else 0
 
 lemma padic_val_mul {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
-  (p: α) (p_prime: prime p) (a b: α) (ha: a ≠ 0) (hb: b ≠ 0):
-  padic_val p p_prime (a * b) = padic_val p p_prime a + padic_val p p_prime b :=
+  (p: α) [p_prime: fact (prime p)] (a b: α) (ha: a ≠ 0) (hb: b ≠ 0):
+  padic_val p (a * b) = padic_val p a + padic_val p b :=
 begin
   unfold padic_val,
   simp [ha, hb],
@@ -37,8 +37,8 @@ end
 
 lemma padic_val_add {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
-  (p: α) (p_prime: prime p) {a b: α} (add_ne_zero: a + b ≠ 0):
-    padic_val p p_prime (a + b) ≥ min (padic_val p p_prime a) (padic_val p p_prime b) :=
+  (p: α) [p_prime: fact (prime p)] {a b: α} (add_ne_zero: a + b ≠ 0):
+    padic_val p (a + b) ≥ min (padic_val p a) (padic_val p b) :=
 begin
   unfold padic_val,
   exact if ha: a = 0
@@ -50,7 +50,7 @@ begin
       from multiplicity.min_le_multiplicity_add,
       have p₀ := λ a: α, λ p: a ≠ 0,
         unique_factorization_monoid.multiplicity_eq_count_factors
-          (irreducible_of_prime p_prime) p,
+          (fact_iff.1 p_prime).irreducible p,
       rw p₀ _ add_ne_zero at h,
       rw p₀ _ ha at h,
       rw p₀ _ hb at h,
@@ -60,46 +60,46 @@ end
 
 lemma padic_val_primes {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
-  (p: α) (p_prime: prime p): ∀ q: α, prime q →
-    padic_val p p_prime q = if associated q p then 1 else 0 :=
+  (p: α) [p_prime: fact (prime p)]: ∀ q: α, prime q →
+    padic_val p q = if associated q p then 1 else 0 :=
 begin
   intros q q_prime,
   unfold padic_val,
   simp only [q_prime.left, if_true, if_false, ne.def, not_false_iff],
   rw ← enat.coe_inj,
   rw eq.symm (unique_factorization_monoid.multiplicity_eq_count_factors
-    (irreducible_of_prime p_prime) q_prime.1),
+    (fact_iff.1 p_prime).irreducible q_prime.1),
   exact if hpq: associated q p
     then by simp [hpq, multiplicity.eq_of_associated hpq,
-      multiplicity.multiplicity_self p_prime.not_unit p_prime.ne_zero]
+      multiplicity.multiplicity_self (fact_iff.1 p_prime).not_unit (fact_iff.1 p_prime).ne_zero]
     else by simp [hpq, multiplicity.multiplicity_eq_zero_of_not_dvd
-      (λ h, hpq (primes_associated_of_dvd p_prime q_prime h).symm)]
+      (λ h, hpq (primes_associated_of_dvd (fact_iff.1 p_prime) q_prime h).symm)]
 end
 
 lemma padic_val_units {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
-  (p: α) (p_prime: prime p): ∀ u: units α, padic_val p p_prime u = 0 :=
+  (p: α) [p_prime: fact (prime p)]: ∀ u: units α, padic_val p u = 0 :=
 begin
   intro u,
   unfold padic_val,
   simp only [u.ne_zero, if_true, ne.def, not_false_iff],
   rw ← enat.coe_inj,
   rw eq.symm (unique_factorization_monoid.multiplicity_eq_count_factors
-    (irreducible_of_prime p_prime) u.ne_zero),
-  exact multiplicity.unit_right p_prime.not_unit u,
+    (fact_iff.1 p_prime).irreducible u.ne_zero),
+  exact multiplicity.unit_right (fact_iff.1 p_prime).not_unit u,
 end
 
 def padic_abv {α} [integral_domain α] [is_principal_ideal_ring α]
     [normalization_monoid α]
     (base: ℝ) (base_pos: 0 < base) (base_lt_one: base < 1)
-    (p: α) (p_prime: prime p): α → ℝ :=
-  λ a: α, if a = 0 then 0 else base ^ padic_val p p_prime a
+    (p: α) [p_prime: fact (prime p)]: α → ℝ :=
+  λ a: α, if a = 0 then 0 else base ^ padic_val p a
 
 instance padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
   (base: ℝ) (base_pos: 0 < base) (base_lt_one: base < 1)
-  (p: α) (p_prime: prime p) :
-    is_absolute_value (padic_abv base base_pos base_lt_one p p_prime) :=
+  (p: α) [p_prime: fact (prime p)] :
+    is_absolute_value (padic_abv base base_pos base_lt_one p) :=
 {
   abv_nonneg := by {
     intro a, unfold padic_abv, split_ifs, refl,
@@ -107,13 +107,13 @@ instance padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ide
   },
   abv_eq_zero := by {
     intro a, unfold padic_abv, split_ifs, tauto,
-    finish [pow_ne_zero (padic_val p p_prime a) (ne.symm $ ne_of_lt base_pos)],
+    finish [pow_ne_zero (padic_val p a) (ne.symm $ ne_of_lt base_pos)],
   },
   abv_add := by {
     intros x y,
     unfold padic_abv,
-    have pow_x_pos := pow_pos base_pos (padic_val p p_prime x),
-    have pow_y_pos := pow_pos base_pos (padic_val p p_prime y),
+    have pow_x_pos := pow_pos base_pos (padic_val p x),
+    have pow_y_pos := pow_pos base_pos (padic_val p y),
     exact if hx: x = 0 then
         by { simp [hx], }
       else if hy: y = 0 then
@@ -124,10 +124,10 @@ instance padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ide
           linarith only [pow_x_pos, pow_y_pos],
         }
       else by {
-        suffices p₁: real.rpow base (padic_val p p_prime (x + y)) ≤
+        suffices p₁: real.rpow base (padic_val p (x + y)) ≤
           max
-            (real.rpow base (padic_val p p_prime x))
-            (real.rpow base (padic_val p p_prime y)),
+            (real.rpow base (padic_val p x))
+            (real.rpow base (padic_val p y)),
         {
           have p₂ := max_le_add_of_nonneg (le_of_lt pow_x_pos) (le_of_lt pow_y_pos),
           repeat { rw [real.rpow_eq_pow, real.rpow_nat_cast] at p₁, },
@@ -145,7 +145,7 @@ instance padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ide
         have pow_c_mono: monotone (pow c),
         from λ a b h, real.rpow_le_rpow_of_exponent_le (le_of_lt one_lt_c) h,
         
-        have p₀ := (int.neg_le_neg $ int.coe_nat_le.2 $ padic_val_add p p_prime hxy),
+        have p₀ := (int.neg_le_neg $ int.coe_nat_le.2 $ padic_val_add p hxy),
         
         repeat { rw base_rw, },
         repeat { rw real.rpow_eq_pow, },
@@ -169,31 +169,31 @@ instance padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ide
       by simp [hx]
     else if hy: y = 0 then
       by simp [hy]
-    else by { simp [hx, hy, padic_val_mul p p_prime x y, pow_add _ _ _], },
+    else by { simp [hx, hy, padic_val_mul p x y, pow_add _ _ _], },
   },
 }
 
 lemma padic_abv_primes {α} [integral_domain α] [is_principal_ideal_ring α]
     [normalization_monoid α]
     (base: ℝ) (base_pos: 0 < base) (base_lt_one: base < 1)
-    (p: α) (p_prime: prime p):
+    (p: α) [p_prime: fact (prime p)]:
       ∀ q: α, prime q →
-      padic_abv base base_pos base_lt_one p p_prime q =
+      padic_abv base base_pos base_lt_one p q =
         if associated q p then base else 1 :=
 begin
   intros q q_prime,
   unfold padic_abv,
-  rw padic_val_primes p p_prime q q_prime,
+  rw padic_val_primes p q q_prime,
   simp [q_prime.1],
 end
 
 lemma padic_abv_bounded {α} [integral_domain α] [is_principal_ideal_ring α]
     [normalization_monoid α]
     (base: ℝ) (base_pos: 0 < base) (base_lt_one: base < 1)
-    (p: α) (p_prime: prime p):
-      ∀ a: α, padic_abv base base_pos base_lt_one p p_prime a ≤ 1 :=
+    (p: α) [p_prime: fact (prime p)]:
+      ∀ a: α, padic_abv base base_pos base_lt_one p a ≤ 1 :=
 begin
-  set abv := (padic_abv base base_pos base_lt_one p p_prime) with abv_def,
+  set abv := (padic_abv base base_pos base_lt_one p) with abv_def,
   
   intro a,
   refine wf_dvd_monoid.induction_on_irreducible a ((abv_zero abv).symm ▸ zero_le_one) _ _,
@@ -201,7 +201,7 @@ begin
     rintros _ ⟨ u, rfl ⟩,
     rw abv_def,
     unfold padic_abv,
-    simp [padic_val_units p p_prime u],
+    simp [padic_val_units p u],
   },
   {
     intros a q ha hq abva_le_one,
@@ -209,31 +209,31 @@ begin
     convert mul_le_mul _ abva_le_one (abv_nonneg abv a) (zero_le_one),
     rw one_mul,
     rw principal_ideal_ring.irreducible_iff_prime at hq,
-    rw [abv_def, padic_abv_primes base base_pos base_lt_one p p_prime q hq],
+    rw [abv_def, padic_abv_primes base base_pos base_lt_one p q hq],
     by_cases hpq: associated q p; simp [hpq, if_true, le_of_lt base_lt_one],
   },
 end
 
 def sample_padic_abv {α} [integral_domain α] [is_principal_ideal_ring α]
   [normalization_monoid α]
-  (p: α) (p_prime: prime p): α → ℝ :=
-    padic_abv (1/2) one_half_pos one_half_lt_one p p_prime
+  (p: α) [p_prime: fact (prime p)]: α → ℝ :=
+    padic_abv (1/2) one_half_pos one_half_lt_one p
 
 instance sample_padic_abv_is_absolute_value {α} [integral_domain α] [is_principal_ideal_ring α]
     [normalization_monoid α]
-    (p: α) (p_prime: prime p): is_absolute_value (sample_padic_abv p p_prime) :=
-  padic_abv_is_absolute_value (1/2) one_half_pos one_half_lt_one p p_prime
+    (p: α) [p_prime: fact (prime p)]: is_absolute_value (sample_padic_abv p) :=
+  padic_abv_is_absolute_value (1/2) one_half_pos one_half_lt_one p
 
 lemma sample_padic_abv_on_primes {α} [integral_domain α] [is_principal_ideal_ring α]
-    [normalization_monoid α] (p: α) (p_prime: prime p):
+    [normalization_monoid α] (p: α) [p_prime: fact (prime p)]:
       ∀ q: α, prime q →
-      sample_padic_abv p p_prime q = if associated q p then 1/2 else 1 :=
-padic_abv_primes (1/2) one_half_pos one_half_lt_one p p_prime
+      sample_padic_abv p q = if associated q p then 1/2 else 1 :=
+padic_abv_primes (1/2) one_half_pos one_half_lt_one p
 
 lemma sample_padic_abv_bounded {α} [integral_domain α] [is_principal_ideal_ring α]
-    [normalization_monoid α] (p: α) (p_prime: prime p):
-      ∀ a: α, sample_padic_abv p p_prime a ≤ 1 :=
-padic_abv_bounded (1/2) one_half_pos one_half_lt_one p p_prime
+    [normalization_monoid α] (p: α) [p_prime: fact (prime p)]:
+      ∀ a: α, sample_padic_abv p a ≤ 1 :=
+padic_abv_bounded (1/2) one_half_pos one_half_lt_one p
 
 def hom_of_abv {α} [linear_ordered_field α] {β} [ring β] [nontrivial β]
   (abv: β → α) [is_absolute_value abv]:

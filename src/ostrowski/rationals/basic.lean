@@ -4,12 +4,11 @@ import data.rat.basic
 import data.real.basic
 import analysis.special_functions.pow
 import data.real.cau_seq
-import data.padics
+import number_theory.padics.padic_norm
 
 import valuations.basic
 
 import for_mathlib.hom
-import for_mathlib.nat_primes
 import for_mathlib.rat
 
 open is_absolute_value
@@ -34,8 +33,8 @@ instance abv_lift (abv: ℚ → ℚ) [habv: is_absolute_value abv]:
   abv_add := by { norm_cast, exact abv_add abv, },
   abv_mul := by { norm_cast, exact abv_mul abv, } }
 
-instance padic_is_abv {p: ℕ} [hp: nat.prime p] : is_absolute_value (padic_norm_ℝ p) :=
-  @abv_lift (padic_norm p) (@padic_norm.is_absolute_value p hp)
+instance padic_is_abv {p: ℕ} [hp: fact (nat.prime p)] : is_absolute_value (padic_norm_ℝ p) :=
+  @abv_lift (padic_norm p) (@padic_norm.is_absolute_value p _)
 
 lemma trivial_abs_is_one_iff_nonzero_arg (a: ℚ) : (a ≠ 0) ↔ (trivial_abs a = 1) :=
 begin
@@ -72,7 +71,7 @@ begin
         ... = (abv q) ^ α * (abv a) ^ α
           : by rw real.mul_rpow (abv_nonneg abv q) (abv_nonneg abv a)
         ... = (abv' q) * (abv' a)
-          : by rw [h q (nat.prime_iff_prime.1 q_prime), a_norms_eq]
+          : by rw [h q (nat.prime_iff.1 q_prime), a_norms_eq]
         ... = abv' ((q * a): ℕ)
             : by { rw ← abv_mul abv', norm_cast, }
     },

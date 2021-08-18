@@ -9,15 +9,6 @@ begin
   exact polynomial.nat_degree_le_nat_degree (le_of_eq hpq.symm),
 end
 
--- TODO: pull back.
--- from c416a486b9d1514b302b27e170f88cea3f3200c1
-lemma polynomial.ne_zero_of_nat_degree_gt {R} [semiring R] {p: polynomial R} {n : ℕ} (h : n < polynomial.nat_degree p) : p ≠ 0 :=
-λ H, by simpa [H, nat.not_lt_zero] using h
-
--- deedf25050f2e3e1f9a1f4e818e7137f5fe79792
-lemma polynomial.ne_zero_of_coe_le_degree {R} [semiring R] {p: polynomial R} {n: ℕ} (hdeg : ↑n ≤ p.degree) : p ≠ 0 :=
-by rw ← polynomial.degree_nonneg_iff_ne_zero; exact trans (by exact_mod_cast n.zero_le) hdeg
-
 theorem with_bot.lt_iff_exists_coe {α} [partial_order α]: ∀ {a b: with_bot α}, a < b ↔ (∃ p : α, b = p ∧ a < ↑p)
 | a (some b) := by simp [with_bot.some_eq_coe, with_bot.coe_eq_coe]
 | a none := by simp [with_bot.none_eq_bot]; exact (λ x hx, hx ▸ (@not_lt_bot _ _ a))

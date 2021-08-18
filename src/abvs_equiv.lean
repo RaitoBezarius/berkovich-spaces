@@ -1,4 +1,4 @@
-import data.padics
+import number_theory.padics.padic_norm
 import data.real.cau_seq
 import analysis.special_functions.exp_log
 import analysis.special_functions.pow

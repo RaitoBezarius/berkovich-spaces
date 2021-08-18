@@ -132,7 +132,7 @@ theorem abv_bounded_padic {α} [integral_domain α] [is_principal_ideal_ring α]
     (abv: α → ℝ) [is_absolute_value abv]
     (bounded: ∀ a: α, abv a ≤ 1)
     (nontrivial: ∃ a: α, a ≠ 0 ∧ abv a ≠ 1):
-      ∃ (p: α) (p_prime: prime p), abvs_equiv abv (sample_padic_abv p p_prime) :=
+      ∃ (p: α) [p_prime: fact (prime p)], abvs_equiv abv (@sample_padic_abv _ _ _ _ p p_prime) :=
 begin
   obtain ⟨ c, c_pos, c_lt_one, p, p_prime, prime_vals ⟩ :=
     absolute_value_on_primes abv bounded nontrivial,
@@ -148,23 +148,24 @@ begin
   use [a, a_pos],
   set φ₁ := hom_of_equiv (hom_of_abv abv) a a_pos
     (λ a, (show abv = (hom_of_abv abv), from rfl) ▸ abv_nonneg abv a) with φ₁_def,
-  set φ₂ := hom_of_abv (sample_padic_abv p p_prime) with φ₂_def,
+  haveI : fact (prime p) := fact_iff.2 p_prime,
+  set φ₂ := hom_of_abv (sample_padic_abv p) with φ₂_def,
   have φ₁_f: (λ x, abv x ^ a) = φ₁ := rfl,
-  have φ₂_f: sample_padic_abv p p_prime = φ₂ := rfl,
+  have φ₂_f: sample_padic_abv p = φ₂ := rfl,
   rw [φ₁_f, φ₂_f],
   suffices: φ₁ = φ₂, by { rw this, },
   apply ext_hom_primes,
   by simp [← φ₁_f, ← φ₂_f,
     absolute_value_units_bounded abv bounded,
-    absolute_value_units_bounded (sample_padic_abv p p_prime)
-      (sample_padic_abv_bounded p p_prime)],
+    absolute_value_units_bounded (sample_padic_abv p)
+      (sample_padic_abv_bounded p)],
   {
     rw [← φ₁_f, ← φ₂_f],
     intros q hq,
     have q_prime := principal_ideal_ring.irreducible_iff_prime.1 hq,
     dsimp,
     rw prime_vals q q_prime,
-    rw sample_padic_abv_on_primes p p_prime q q_prime,
+    rw sample_padic_abv_on_primes p q q_prime,
     rw a_def,
     exact if hpq: associated q p
       then by {

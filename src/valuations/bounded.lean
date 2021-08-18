@@ -116,7 +116,7 @@ begin
         (λ n: ℕ, (C * (n + 1)) ^ (1/n: ℝ) * (max (abv a) (abv b)))
         filter.at_top (nhds (max (abv a) (abv b))),
       {
-        convert tendsto.mul_const (max (abv a) (abv b)) lim₀,
+        convert filter.tendsto.mul_const (max (abv a) (abv b)) lim₀,
         rw one_mul,
       },
       

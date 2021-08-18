@@ -1,6 +1,6 @@
 import analysis.special_functions.pow
 import data.set.function
--- import analysis.calculus.lhopital
+import analysis.calculus.lhopital
 import analysis.calculus.mean_value
 
 open filter
@@ -59,15 +59,7 @@ end
 
 -- [C(n + 1)]^(1/n) = exp(log(C[n + 1]) / n) = exp([log C / n] + log (n + 1) / log n)
 
-lemma deriv.lhopital_inf_at_top {l: ℝ} {f g: ℝ → ℝ}
-  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ f x)
-  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv g x ≠ 0)
-  (hftop: filter.tendsto f filter.at_top filter.at_top)
-  (hgtop: filter.tendsto g filter.at_top filter.at_top)
-  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top (nhds l)):
-  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top (nhds l) :=
-begin
-  rw filter.eventually_iff_exists_mem at *,
+/-  rw filter.eventually_iff_exists_mem at *,
 
   rcases hdf with ⟨ s₁, hs₁, hdf ⟩,
   rcases hg' with ⟨ s₂, hs₂, hg' ⟩,
@@ -100,13 +92,15 @@ begin
     have fact₁ : deriv g x ≠ 0, from hg' _ (hδ _ (le_trans haδ (le_of_lt hx_mem.1))).2,
     field_simp [fact₀, fact₁, mul_comm _ (g b - g a), mul_comm _ (f b - f a)],
   },
-  have fact2_plus: ∀ (s: set ℝ) (hs: s ∈ (nhds l)), ∃ (c: ℝ), ∀ (a b: ℝ), c ≤ a → a < b → (f b - f a) / (g b - g a) ∈ s,
+  have fact2_plus: ∀ (s: set ℝ) (hs: s ∈ (nhds l)), ∃ (c: ℝ) (H: c ≥ δ), ∀ (a b: ℝ), c ≤ a → a < b → (f b - f a) / (g b - g a) ∈ s,
   {
     choose! k P Q using fact2,
     rw filter.tendsto_at_top' at hdiv,
     intros u hu,
     obtain ⟨ δ', hdiv' ⟩ := hdiv u hu,
     use (max δ δ'),
+    split,
+    exact le_max_left _ _,
     intros a b haδ hab,
     have: δ ≤ a, from le_trans (le_max_left _ _) haδ,
     rw [← Q a b this hab],
@@ -123,29 +117,104 @@ begin
         )
       ),
   },
+  have fact3: ∀ (s: set ℝ) (hs: s ∈ (nhds l)), ∃ (c: ℝ) (H: c ≥ δ), ∀ x ∈ set.Ioi c, (f x - f c) / (g x - g c) ∈ s,
+  {
+    intros s hs,
+    obtain ⟨ c, ⟨ hcδ, hc ⟩ ⟩ := fact2_plus s hs,
+    use c,
+    split,
+    exact hcδ,
+    intros x hx,
+    exact hc c x (le_refl _) (set.mem_Ioi.1 hx),
+  },
   have fact4 : filter.tendsto 
   (λ (x: ℝ), ((f x) / (g x) - (f δ) / (g x)) / (1 - (g δ) / (g x))) filter.at_top (nhds l),
   {
-    rw [filter.tendsto_def],
-    intros s' hs',
-    refine filter.eventually_at_top.2 _,
-    obtain ⟨ c, hc ⟩ := fact2_plus s' hs',
-    use c,
-    intros x hx,
-    simp,
-    convert hc x δ hx _ using 1,
-    {
-      have fact₀: 1 - (g δ) / (g x) ≠ 0, by sorry,
-      have fact₁: g x ≠ 0, by sorry,
-      have hdiffg: g x - g δ ≠ 0, by sorry,
-      have hdiffg': g δ - g x ≠ 0, by sorry,
-      field_simp [fact₀, fact₁, hdiffg],
-      ring,
-    },
-    sorry,  
+    sorry,
   },
   convert tendsto_aux3 (tendsto_aux1 _ fact4) _,
   all_goals { exact tendsto_aux4 hgtop },
+-/
+
+lemma deriv.comp_inv {f : ℝ → ℝ} {x: ℝ}
+  (hx: x ≠ 0) (hdf: differentiable_at ℝ f (1 / x)): deriv (λ (y: ℝ), f y⁻¹) x = - (deriv f (1 / x)) / x^2 :=
+  begin
+    simp [← one_div],
+    rw [deriv.comp _ hdf],
+    field_simp,
+    sorry,
+    -- simp [one_div, differentiable_at_inv hx],
+  end
+
+lemma deriv.lhopital_at_top_nhds_right_on_Ioo {l a b: ℝ} {f g: ℝ → ℝ}
+  (hdf: ∀ x ∈ set.Ioo a b, differentiable_at ℝ f x)
+  (hg': ∀ x ∈ set.Ioo a b, deriv g x ≠ 0)
+  (hcf: continuous_on f (set.Icc a b))
+  (hcg: continuous_on g (set.Icc a b))
+  (hftop: filter.tendsto f (𝓝[set.Ioi a] a) at_top)
+  (hgtop: filter.tendsto g (𝓝[set.Ioi a] a) at_top)
+  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) (𝓝[set.Ioi a] a) (𝓝 l)):
+  filter.tendsto (λ (x: ℝ), f x / g x) (𝓝[set.Ioi a] l) (𝓝 l) :=
+  begin
+    have cmvt : ∀ (a' b': ℝ), a ≤ a' → b' ≤ b → a' < b' → ∃ (c: ℝ) (H: c ∈ set.Ioo a' b'), (deriv f c) / (deriv g c) = (f b' - f a') / (g b' - g a'),
+    {
+      intros a' b' haa' hb'b hab',
+      have hdg' : differentiable_on ℝ g (set.Ioo a' b') := λ y hy, 
+      differentiable_at.differentiable_within_at 
+      (not_not.1 (mt deriv_zero_of_not_differentiable_at (hg' _ ⟨ lt_of_le_of_lt haa' hy.1, lt_of_lt_of_le hy.2 hb'b ⟩))),
+      convert 
+        exists_ratio_deriv_eq_ratio_slope f hab' 
+        (hcf.mono (λ z (hz: z ∈ set.Icc a' b'), ⟨ le_trans haa' hz.1, le_trans hz.2 hb'b ⟩))
+        (λ y hy, differentiable_at.differentiable_within_at 
+          (hdf _ ⟨ lt_of_le_of_lt haa' hy.1, lt_of_lt_of_le hy.2 hb'b ⟩))
+        g 
+        (hcg.mono (λ z (hz: z ∈ set.Icc a' b'), ⟨ le_trans haa' hz.1, le_trans hz.2 hb'b ⟩))
+        hdg',
+      ext,
+      simp only [and_imp, exists_prop, and.congr_right_iff],
+      intros hx_mem,
+      -- g' nonzero, therefore g monotone, therefore g a < g b, therefore g b - g a ≠ 0
+      have fact₀ : g b' - g a' ≠ 0, from sorry,
+      have fact₁ : deriv g x ≠ 0, from hg' _ ⟨ lt_of_le_of_lt haa' hx_mem.1, lt_of_lt_of_le hx_mem.2 hb'b ⟩,
+      field_simp [fact₀, fact₁, mul_comm _ (g b' - g a')],
+    },
+    sorry,
+  end
+
+lemma deriv.lhopital_inf_at_top {l: ℝ} {f g: ℝ → ℝ}
+  (hdf: ∀ᶠ (x: ℝ) in filter.at_top, differentiable_at ℝ f x)
+  (hg': ∀ᶠ (x: ℝ) in filter.at_top, deriv g x ≠ 0)
+  (hftop: filter.tendsto f filter.at_top filter.at_top)
+  (hgtop: filter.tendsto g filter.at_top filter.at_top)
+  (hdiv: filter.tendsto (λ (x: ℝ), deriv f x / deriv g x) filter.at_top (nhds l)):
+  filter.tendsto (λ (x: ℝ), f x / g x) filter.at_top (nhds l) :=
+begin
+  have hdf' : ∀ᶠ (x: ℝ) in (𝓝[set.Ioi 0] 0), differentiable_at ℝ (λ (x: ℝ), f (1 / x)) x, from sorry,
+  have hg'' : ∀ᶠ (x: ℝ) in (𝓝[set.Ioi 0] 0), deriv (λ (y: ℝ), g (1 / y)) x ≠ 0, from sorry,
+  have hfzero : tendsto (λ (x: ℝ), f (1 / x)) (𝓝[set.Ioi 0] 0) at_top,
+  by simp [hftop.comp tendsto_inv_zero_at_top],
+  have hgzero : tendsto (λ (x: ℝ), g (1 / x)) (𝓝[set.Ioi 0] 0) at_top,
+  by simp [hgtop.comp tendsto_inv_zero_at_top],
+  convert (deriv.lhopital_at_top_nhds_right_on_Ioo hdf' hg''
+  hfzero hgzero _).comp tendsto_inv_at_top_zero',
+  ext, field_simp, ring,
+  convert (tendsto_congr' _).1 (hdiv.comp tendsto_inv_zero_at_top),
+  rw [eventually_eq_nhds_within_iff, eventually_iff_exists_mem],
+  use (set.Ioi (-1)),
+  split,
+  exact Ioi_mem_nhds (by norm_num),
+  intros y _ hy,
+  have h : y ≠ 0, from ne_of_gt (set.mem_Ioi.1 hy),
+  field_simp,
+  conv {
+    to_rhs,
+    simp [one_div],
+  },
+  rw [deriv.comp_inv h, deriv.comp_inv h],
+  rw [div_div_div_cancel_right, neg_div_neg_eq],
+  simp [h],
+  sorry,
+  sorry,
 end
 
 lemma eventually_eq.of_le_ite_at_top {α β: Type*} [preorder α] {f g: α → β} {a: α} {c: β} [decidable_rel ((≤) : α → α → Prop)]:
@@ -167,15 +236,12 @@ begin
   ext,
   by_cases (x = -1),
   {
-    rw [if_pos h, h],
-    convert deriv_zero_of_not_differentiable_at
-      (
-        (mt real.differentiable_at_log_iff.1) 
-        (not_not.2 ((add_eq_zero_iff_eq_neg.2) h))
-      )
-    using 1,
-    rw [add_comm x 1],
-    -- todo: handle eval properly because rw cannot see through deriv.
+    rw [if_pos h],
+    have := (mt real.differentiable_at_log_iff.1) (not_not.2 ((add_eq_zero_iff_eq_neg.2) h)),
+    rw [add_comm _ _] at this,
+    apply deriv_zero_of_not_differentiable_at,
+    -- have notdiff := (mt (differentiable_at.comp x)),
+    -- rw [not_imp] at notdiff,
     sorry,
   },
   {

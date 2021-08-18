@@ -1,4 +1,4 @@
-import data.padics
+import number_theory.padics.padic_norm
 import topology.basic
 import data.rat.basic
 import data.real.cau_seq
@@ -16,9 +16,10 @@ import ring_theory.unique_factorization_domain
 
 import abvs_equiv
 import for_mathlib.exp_log
-import for_mathlib.nat_find
 import ostrowski.rationals.bounded
 import ostrowski.rationals.unbounded
+
+import for_mathlib.rat
 
 section
 open_locale classical
@@ -26,61 +27,6 @@ open list option is_absolute_value
 noncomputable theory
 
 variables {α : Type*} [ring α]
-
-def metric_space_of_real_abv (abv: α → ℝ) [is_absolute_value abv] : metric_space α :=
-{ dist := λ x y, abv $ x - y,
-  dist_self := λ x, show abv (x-x) = 0, by simp[abv_zero abv],
-  eq_of_dist_eq_zero := λ x y h, eq_of_sub_eq_zero $ (abv_eq_zero abv).mp h,
-  dist_comm := abv_sub abv,
-  dist_triangle := λ x y z, begin
-    change abv (x-z) ≤ abv (x-y) + abv (y-z),
-    rw show x - z = (x - y) + (y - z), by abel,
-    apply abv_add,
-  end}
-
--- rational metric space equipped of an absolute value
-def metric_rat_with_abv (abv: ℚ → ℝ) [is_absolute_value abv]: metric_space ℚ := metric_space_of_real_abv abv
-
--- définition de l'équivalence de valeur absolues
-def metric_space_eq {α: Type*} (d d' : metric_space α) : Prop :=
-    d.to_uniform_space.to_topological_space = d'.to_uniform_space.to_topological_space
-
--- hypothèsqe 1: il existe n, tel que |n|_* > 1
--- lemme 1 : il existe une écriture en base a de b^n
--- lemme 2 : limite (a(nlog_a b + 1))^(1/n) = 1
--- lemme 3 : il existe lambda, pour tout n, |n|_* = n^lambda
-
--- hypothèse 2: pour tout n, |n|_* <= 1
-
--- stratégie:
-
--- par contraposée, on a qu'à prouver que si pour tout n : Q, (n = 0) ou (abv(n) = 1)
--- alors, on a que abv = trivial_abs OK?
-
--- rigoureusement, on contrapose
--- on introduit les éléments
--- on procède en discutant selon q = 0 ou non
--- on élimine assez vite le cas q = 0 par réécriture de la valeur absolue
--- puis ensuite, on se donne le cas qu'on veut, on cloture exfalso où ça a du sens
--- sinon on se ramène à démontrer déjà d'une part que trivial_abs q = 1 (trivial)
--- et du coup ça revient à démontrer que sous hypothèse de double inégalité, on a abv q = 1
--- ce qui est immédiat par antisymétrie.
-
--- TODO: what about n : N ?
-lemma non_trivial_abs_has_an_rational_of_norm_non_null_and_not_one (abv : ℚ → ℝ) [is_absolute_value abv]
-    : ((∃ q : ℚ, (abv q) ≠ (trivial_abs q)) →  (∃ n : ℚ, (n ≠ 0) ∧ (abv(n) < 1 ∨ abv(n) > 1))) :=
-    (begin
-    contrapose!,
-    intros H q,
-    by_cases (q = 0),
-    rw h,
-    rw [is_absolute_value.abv_zero abv, is_absolute_value.abv_zero trivial_abs],
-    have c : trivial_abs q = 1,
-    apply (trivial_abs_is_one_iff_nonzero_arg q).1,
-    exact h,
-    rw c,
-    linarith [H q h]
-    end)
 
 def equiv_abs (α: ℝ) := λ q: ℚ, ((abs q: ℝ) ^ α)
 
@@ -227,8 +173,7 @@ theorem rat_abs_val_p_adic_or_real (abv: ℚ → ℝ)
     (hnontriv: abv ≠ trivial_abs):
     (abvs_equiv abv (λ x: ℚ, abs x))
     ∨
-    (∃ (p) [hp: nat.prime p],
-        @abvs_equiv _ _ abv (padic_norm_ℝ p) habv (@padic_is_abv p hp)) :=
+    ∃ (p) [p_prime: fact (nat.prime p)], abvs_equiv abv (@rat_padic_abv p p_prime) :=
     begin
         by_cases boundness : ∀ z : ℕ, abv z ≤ 1,
         {

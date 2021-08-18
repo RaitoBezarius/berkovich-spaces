@@ -7,3 +7,9 @@ begin
   push_neg at h,
   exact ne_of_lt (real.log_neg hx_pos (lt_of_le_of_ne h hx)),
 end
+
+lemma log_inj_pos {x y: ℝ} (x_pos: 0 < x) (y_pos: 0 < y):
+  real.log x = real.log y → x = y :=
+λ h, le_antisymm
+  ((real.log_le_log x_pos y_pos).1 $ le_of_eq h)
+  ((real.log_le_log y_pos x_pos).1 $ le_of_eq $ eq.symm h)

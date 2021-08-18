@@ -12,7 +12,7 @@ lemma tendsto_aux1 (n: ℕ) (α: ℝ) {C: ℝ} (C_pos: C > 0):
   (λ (N : ℕ), C ^ ((1: ℝ) / N) * ↑n ^ α)
   filter.at_top (nhds (↑n ^ α)) :=
 begin
-  convert tendsto.mul_const ((n: ℝ)^α) (tendsto_root_at_top_nhds_1_of_pos C_pos),
+  convert filter.tendsto.mul_const ((n: ℝ)^α) (tendsto_root_at_top_nhds_1_of_pos C_pos),
   rw one_mul,
 end
 
@@ -160,8 +160,8 @@ begin
     ... = list.sum (base_repr.map_with_index (λ (i a: ℕ), (abv a) * ((n₀: ℝ) ^ α) ^ i)) : by rw_mod_cast h_abv_n0
     ... ≤ list.sum (base_repr.map_with_index (λ (i a: ℕ), ((n₀: ℝ) ^ α) ^ i)) : sum_le_sum_abv_aux1 (le_of_lt h_n0_pow_alpha_pos) h_coeff_abv_pos
     ... = list.sum (list.map (pow ((n₀: ℝ) ^ α)) (list.range base_repr.length)) : by rw list.map_with_index_eq_range_map (λ i a, ((n₀ : ℝ) ^ α) ^ i) (λ i, ((n₀ : ℝ) ^ α) ^ i) base_repr (by simp)
-    ... = geom_series ((n₀: ℝ) ^ α) (base_repr.length) : geom_sum_of_sum_of_range_map ((n₀: ℝ) ^ α) base_repr.length
-    ... = (n₀ ^ α) ^ (base_repr.length - 1) * geom_series (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : by { rw ← h_aux1, exact geom_sum_eq_factor_inv_geom_sum (base_repr.length - 1) h_n0_pow_neq_0 h_n0_pow_neq_1}
+    ... = geom_sum ((n₀: ℝ) ^ α) (base_repr.length) : geom_sum_of_sum_of_range_map ((n₀: ℝ) ^ α) base_repr.length
+    ... = (n₀ ^ α) ^ (base_repr.length - 1) * geom_sum (((n₀: ℝ) ^ α)⁻¹) (base_repr.length) : by { rw ← h_aux1, exact geom_sum_eq_factor_inv_geom_sum (base_repr.length - 1) h_n0_pow_neq_0 h_n0_pow_neq_1}
     ... ≤ (n₀ ^ α) ^ (base_repr.length - 1) * ∑' n: ℕ, (((n₀: ℝ) ^ α)⁻¹) ^ n : (mul_le_mul_left h_n0_pow_alpha_pow_len_pos).2 $ real.finite_geom_sum_le_infinite_geom_sum_of_lt_1 (base_repr.length) h_n0_pow_alpha_inv_nonneg (by assumption)
     ... = (n₀ ^ α) ^ (base_repr.length - 1) * C : by erw tsum_geometric_of_lt_1 (inv_nonneg.2 (le_of_lt h_n0_pow_alpha_pos)) h_n0_pow_alpha_inv_lt_one
     ... ≤ n^α * C : (mul_le_mul_right C_pos).2 h_n0_pow_alpha_pow_len_le_n_pow_alpha
